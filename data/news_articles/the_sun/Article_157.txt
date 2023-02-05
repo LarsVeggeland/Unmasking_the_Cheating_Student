@@ -1,0 +1,70 @@
+Author: Henry Holloway
+DEEPFAKE AI-generated people will be among us by 2024 and will be nearly impossible to detect, a former White House official has warned. 
+Pictures created by 
+, increasingly smart chatbots and 
+ are already becoming hard to discern from reality. 
+The technology is only going to become more advanced - with rapid developments already smoothing out the edges and finessing the programmes. 
+Red flags are already being raised - as some imagery created by AI can already be almost 
+apart from a few telltale inconsistencies. 
+The pictures at the top of this article are near perfect recreations of people's faces, created using the AI driven system 
+. 
+These "people" have never been born - they are simply bundles of code with the illusion of personality, with varying ages, genders, facial shapes and ethnicities.
+The 
+ - complete with the imperfections that bring faces to life, far beyond what would see in video games like The Sims.
+Seeing one of the faces crossing your feed on Facebook, Twitter and Instagram you would never think twice that they may be "fake".
+And perhaps one of them could even one day be your new colleague whose face pings up saying "hello" on Slack or Discord?
+Cybersecurity expert Theresa Payton, the first-ever female White House Chief Information Officer, predicted a worrying new development for the future - the advent of true 
+.
+Ms Payton described how all of these developing features of AI would combine with real data from real people to create "franken-frauds" and "
+". 
+It is the next step in synthetic IDs which are often used to scam money from companies.
+Synthetic IDs take data from real people and use it to create new identities - with the scams based around them already costing billions of pounds every year. 
+And in the new age of increasing remote working, these "AI persons" could 
+, said Ms Payton. 
+"As companies automate their resume scanning processes and conduct remote interviews, fraudsters and scammers will leverage cutting-edge deep fake 
+ to create 'clone' workers backed up by synthetic identities," she told The Sun Online.
+"The digital walk into a natural person's identity will be nearly impossible to deter, detect, and recover." 
+She added: "The ability to 
+ becomes automated and is run in real-time using AI and big data analytics to test and ensure it looks authentic."
+Ms Payton explained that 
+, with new hiring practices and more monitoring to ensure you actually interacting with real people.
+She called for further regulation on 
+ and 
+ before the systems can truly become "indistinguishable" from the real thing.
+And as well as this technology being misused by scammers, there is also another chilling possibility for the 
+.
+Dangerous misinformation could easily be spread online using the tech.
+Where as a picture of a politician taking a bribe was once hard evidence of corruption, would you now have to stop and think whether or not this was an AI generated image?
+The world has already seen some fake news spread - such a AI generated deep fake video Ukrainian president 
+ telling his troops to lay down their arms last March.
+Such a piece of misformation could have been devastating and sowed chaos if it ever got traction.
+But thankfully, the amateur attempt at impersonating Zelensky was laughed off due to its shoddy appearance.
+Ms Payton said: "The consumerization of deepfakes allows anyone with minimal technical prowess and a home computer to manipulate and generate deepfake audio and video."
+She added: "Before technology becomes indistinguishable, there needs to be greater awareness of deepfakes and their impact on the online environment. 
+"A group of technology companies created the Coalition for Content Provenance and Authenticity to create a standard where people could view the source of the image or video. 
+"Finally, technology companies need to adapt content moderation practices now to be able to identify and remove deepfake technology on their platforms. 
+"If these practices are not adopted, the online environment could drastically change where misinformation and manipulation campaigns are increased."
+Dr Tim Stevens, the director of the Cyber Security Research Group at King's College London, also warned The Sun Online aboutf AI being used to spread fake news.
+"We’re past the possible and into the realm of the actual," he said.
+He went on: "Tools like generative 
+ are already creating fake images that most people find difficult, if not impossible, to discern from real ones. 
+"We have detection technologies that can identify these, but these are neither widespread nor are they accurate for all time – creation and detection algorithms are already locked into a contest of evasion and identification, with fake content creators always a step in front."
+AI makes the already volatile information space even more dangerous, he warned, with trust in traditional news sources already "low".
+"These technologies in mischievous hands are likely to diminish it further," said Dr Stevens.
+"We would hope that people would seek to validate their information sources but not only is that difficult but many people don’t care: if it fits their worldview, it is already valid and not worth challenging. 
+"We have seen this with social media content for many years and AI is likely to make the situation much worse."
+Both Dr Stevens and Ms Payton warned hostile states like Russia and China will likely use the technology to attempt to spread discord in the West.
+"Both Russia and China are explicit that their informational strategies include the objective of weakening social cohesion in target societies," said Dr Stevens.
+Ms Payton added: "Rogue actors, such as China or Russia, have used deepfakes and AI-generated images to attempt to influence the social discourse within their own countries, and outside their borders, to their own advantage."
+Tech boffins have already mastered the technique - with 
+.
+Midjourney's computer programme uses machine learning and a neural network to put together pictures based on the prompts offered to it by humans - such as "women at a party."
+It then produces images like the one above which can be 
+.
+The controversial AI is trained by being given photos which it then draws upon to create its own images - albeit with some details of the people missing.
+In one chilling snap, it is clear the women are inhuman - their skin shines too much and they have too many teeth crammed into their mouths.
+ Liam Smith WINS after incredible shot sees Chris Eubank Jr hit deck
+ Maya Jama hit with legal demand for $1million diamond ring from ex-fiancé
+ Liam Smith STOPS Chris Eubank Jr in fourth round of heated Battle of Britain
+ Prince Andrew plotting sensational bid to overturn £3m settlement with accuser
+&copy

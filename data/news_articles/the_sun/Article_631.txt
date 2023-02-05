@@ -1,0 +1,31 @@
+Author: Millie Turner
+OVER 11million people have been unknowingly been part of an ad-fraud scheme, according to a report. 
+Millions had their phones attacked by the 
+ called Vastflux.
+The attacked spoofed 1,700 
+and targeted 120 publishers, Wired first reported. 
+running the operation were making requests for an eyewatering 12billion ads per day. 
+Cyber firm Human Security uncovered the organised attack.
+Interestingly, the hackers were not trying to hijack an entire phone or app, but instead just one ad slot - in which it embedded 
+ after winning the auction for that ad space.
+The code meant that one advert would multiply into as many as 25 video ads beneath the surface - but show just one on the top. 
+It made the ad look just like any other. 
+But actually the fraudsters were raking in the cash from a huge number of advertisements, but only showing a handful of them to tech users.
+iOS devices, such as 
+ and 
+, were impacted the most, according to Marion Habiby, a data scientist at Human Security. 
+Unfortunately, there is little way of consumers knowing which apps were being used as vessels by the hackers. 
+But experts warned smartphone users to watch out for unexplained jumps in data usage or having the phone's screen turn on at random times. 
+They also suggested keep an eye on the performance of an app and whether it slows down suddenly or crashes frequently.
+Luckily, consumers themselves were not the target and were not left out of pocket. 
+And in even better news, the hackers have seemingly shut off their operation after Human Security worked with the organisations who had been victims of the fraud. 
+Looking for tips and hacks for your phone? Want to find those secret features within social media apps? We have you covered...
+Get all the latest 
+, 
+, 
+ and other tech gadget stories here.
+ Liam Smith WINS after incredible shot sees Chris Eubank Jr hit deck
+ Maya Jama hit with legal demand for $1million diamond ring from ex-fiancé
+ Liam Smith STOPS Chris Eubank Jr in fourth round of heated Battle of Britain
+ Prince Andrew plotting sensational bid to overturn £3m settlement with accuser
+&copy

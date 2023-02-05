@@ -1,0 +1,67 @@
+Author: Jamie Harris
+GOOGLE Stadia closed down this week - but it doesn't mean the end for your controller.
+The tech giant is allowing players to convert their 
+ controller so it can be used on other platforms.
+It comes after 
+ made the difficult decision to 
+ which was originally dubbed the 
+ of gaming.
+The service was beset by connection issues and struggled to attract as many gamers as Google had hoped.
+So it was shutdown for good on January 18.
+The firm promised to offer people refunds for any games they bought.
+As for the controller, Google is letting you get some use of it beyond Stadia.
+But you only get a certain amount of time to do it, so don't wait around.
+You have until the end of 2023 - after that it'll be completely useless.
+It's also important to note that switching is permanent, not that you'll get much use of it now Stadia has officially closed down.
+The process converts the controller from Wi-Fi mode to 
+ mode.
+Before doing anything, make sure your Stadia controller is charged as it needs no less than 10 per cent to go ahead with the switch.
+Using the Chrome web browser visit 
+.
+Tap the 
+ button to proceed with the switching process if you're sure you want to go ahead with it - remember, it's permanent.
+If you're certain, tick the accept box, followed by the 
+ button.
+Plug your Stadia controller into your PC with a USB data cable and click 
+.
+Then click 
+.
+A popup box will appear and you'll need to select the controller from the list, followed by 
+.
+Tap 
+.
+After this, you need to unlock the Stadia controller.
+This is done by first unplugging it.
+Then plugging it back in while holding the three dot button - the status light should stay off.
+Finally press the three dot button, the Google Assistant button, A and Y at the same time.
+To continue, click 
+ step on the Chrome browser again.
+Now you'll have to click 
+, which lets Chrome download the update to put on the controller.
+Select 
+ from the list, then 
+.
+The download will then start.
+Once it's done, click 
+, which is the installation stage.
+Click 
+.
+From the popup box, select 
+ and 
+.
+The installation will then begin - make sure you don't unplug the controller or turn off your computer.
+You can now use your Stadia controller for other wireless gaming services. 
+Once your Stadia controller has switched to Bluetooth mode you'll want to know how to actually use it with other gaming services.
+Just hold the Stadia button and Y for about two seconds until the status light flashes orange - this will get it into pairing mode.
+On the gaming device, search for a Bluetooth accessory and select it from the list.
+Looking for tips and tricks across your favourite consoles and games? We have you covered...
+Get all of the latest 
+, 
+ and other 
+ here
+ 
+ Liam Smith WINS after incredible shot sees Chris Eubank Jr hit deck
+ Maya Jama hit with legal demand for $1million diamond ring from ex-fiancé
+ Liam Smith STOPS Chris Eubank Jr in fourth round of heated Battle of Britain
+ Prince Andrew plotting sensational bid to overturn £3m settlement with accuser
+&copy
