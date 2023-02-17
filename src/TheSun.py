@@ -14,10 +14,10 @@ class SunScraper(Scraper):
         base_urls = ["https://www.thesun.co.uk/news-sitemap.xml"]
 
         # Pattern for parsing the article urls
-        regex_pattern = r"(?<=<loc>)https:\/\/www.thesun.co.uk\/[a-zA-Z0-9\/-]{5,150}(?=<\/loc>)"
+        regex_patterns = [r"(?<=<loc>)https:\/\/www.thesun.co.uk\/[a-zA-Z0-9\/-]{5,150}(?=<\/loc>)"]
 
         # Initialize super class
-        super().__init__(base_urls, regex_pattern, GET)
+        super().__init__(base_urls, regex_patterns, GET)
         
         # Remove noise at the end
         self.cutoff_end()
