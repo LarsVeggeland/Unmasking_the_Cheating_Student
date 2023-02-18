@@ -6,6 +6,8 @@ from random import random
 from datetime import datetime
 from Utils import get_time, print_progressbar
 from bs4 import BeautifulSoup
+import hashlib
+from time import sleep
 
 
 
@@ -36,7 +38,7 @@ class Scraper:
             sitemap = requests.get(base_url).text
 
             # Some simple cleaining/normalization of the sitemap page
-            sitemap = re.sub(pattern=r"\s+", string=sitemap, repl="")
+            #sitemap = re.sub(pattern=r"\s+", string=sitemap, repl="")
             
             # Iterate over all the provided patterns and retrive the matching urls
             for regex_pattern in regex_patterns:
@@ -54,7 +56,6 @@ class Scraper:
         """
         Get a single article while sleeping 0-1 seconds to throttle traffic
         """
-        #sleep(random())
         return requests.get(url).text
 
     
@@ -68,7 +69,14 @@ class Scraper:
         print(f"{get_time()} - Getting {length} article{'s' if length > 1 else ''}...")
         
         for i in range(length):
-            articles[i] = self.get_article(self.urls[i])
+            try:
+                if i % 100 == 0:
+                    sleep(3)
+                articles[i] = self.get_article(self.urls[i])
+            except requests.exceptions.MissingSchema:
+                # This occurs when there is something wrong with the parsed URl.
+                # These URLs are just ignores
+                pass
             print_progressbar(current_position=i, length=length)
         
         print(f"{get_time()} - Articles collected")
@@ -84,31 +92,33 @@ class Scraper:
         na = 0
         na_list = []
         for i, article in enumerate(self.articles):
-            title = f"Article_{i+1}"
-
-            with open(f"{PATH}/{title}.txt", "a+", encoding="utf-8", errors="ignore") as file:
-                try:
-                    soup = BeautifulSoup(article, 'lxml')
-
+            try:
                     # Get the name of the author
                     author = self.get_author(article, author_patterns)
 
+                    # Stops if no authpr could be found
+                    if not len(author): raise AttributeError
+
                     # Get all the text elements in the article
-                    text_elements = [element for element in soup.find_all(text=True) if element.parent.name in text_tags]
-                    article = "\n".join(text_elements)
-                    file.write(f"Author: {author}\n{article}")
+                    text = self.get_article_text(article, text_tags)
                     
-                    # This should be above but keep it here for debugging purposes
-                    if not len(author): raise IndexError
+                    # Stops if the article is empty/no text could be retrieved
+                    if not len(text): raise AttributeError
 
-                # IO-errors
-                except IOError or FileNotFoundError:
-                    print("Error when writing file nr. {i}: {title} to disk")
+                    # Get filehash
+                    title = hashlib.sha256(bytes(text, encoding="utf-8")).hexdigest()
+                    # Writes author and text to file
+                    with open(f"{PATH}/{title}.txt", "w+", encoding="utf-8", errors="ignore") as file:
+                            file.write(f"{author}\n{text}")
+                    
+            # IO-errors
+            except IOError or FileNotFoundError:
+                print("Error when writing file nr. {i}: {title} to disk")
 
-                # No authorname could be retrieved
-                except IndexError:
-                    na += 1
-                    na_list.append(i)
+            # No authorname could be retrieved or the text is empty
+            except AttributeError:
+                na += 1
+                na_list.append(i)
 
             print_progressbar(i, len(self.articles))
 
@@ -132,3 +142,15 @@ class Scraper:
                 author = author[0]
                 break
         return author
+
+
+    def get_article_text(self, article, text_tags):
+        """
+        Finds all the specified text tags in the article and combines them into a single string
+        """
+        soup = BeautifulSoup(article, 'lxml')
+        # Get all the text elements in the article
+        text_elements = [element for element in soup.find_all(text=True) if element.parent.name in text_tags]
+        text = "\n".join(text_elements)
+
+        return text
