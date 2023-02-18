@@ -12,11 +12,11 @@ def create_dataset_from_directory(directory_source : str,
                                 dataset_name : str) -> None:
 
     dataset_entries = get_data_set_entries(directory_source)
-    #df = pd.DataFrame(dataset_entries)
-    #df.to_csv(f"{directory_target}\\{dataset_name}.csv", index=False, header=False)
-    with open(f"{directory_target}\\{dataset_name}.csv", "w+", errors="ignore") as file:
-        writer = csv.writer(file, delimiter="")
-        writer.writerows(dataset_entries)
+    df = pd.DataFrame(dataset_entries)
+    df.to_csv(f"{directory_target}\\{dataset_name}.csv", index=False, header=False)
+    #with open(f"{directory_target}\\{dataset_name}.csv", "w+", errors="ignore") as file:
+        #writer = csv.writer(file)
+        #writer.writerows(dataset_entries)
 
 def get_data_set_entries(directory_path) -> list:
     files = os.listdir(directory_path)
@@ -33,7 +33,8 @@ def get_author_and_text(filepath : str) -> list:
     with open(filepath, 'r', errors="ignore") as file:
         lines = file.readlines()
         author = lines[0]
-        text = f'"{" ".join(lines[1:])}"'
+        text = lines[1:]
+        #text = f'"{" ".join(lines[1:])}"'
 
     return [author, text]
 
