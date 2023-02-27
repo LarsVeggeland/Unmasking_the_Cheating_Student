@@ -36,9 +36,6 @@ class Scraper:
         # Get each site map page for the provider
         for i, base_url in enumerate(base_urls):
             sitemap = requests.get(base_url).text
-
-            # Some simple cleaining/normalization of the sitemap page
-            #sitemap = re.sub(pattern=r"\s+", string=sitemap, repl="")
             
             # Iterate over all the provided patterns and retrive the matching urls
             for regex_pattern in regex_patterns:
@@ -59,11 +56,11 @@ class Scraper:
         return requests.get(url).text
 
     
-    def get_articles(self, article_links : list) -> list:
+    def get_articles(self) -> list:
         """
         Fetches all the articles found on the sitemap page
         """
-        length = len(self.urls)
+        length = len(self.urls[10000:])
         articles = [""]*length
 
         print(f"{get_time()} - Getting {length} article{'s' if length > 1 else ''}...")
@@ -75,7 +72,7 @@ class Scraper:
                 articles[i] = self.get_article(self.urls[i])
             except requests.exceptions.MissingSchema:
                 # This occurs when there is something wrong with the parsed URl.
-                # These URLs are just ignores
+                # These URLs are just ignored
                 pass
             print_progressbar(current_position=i, length=length)
         
