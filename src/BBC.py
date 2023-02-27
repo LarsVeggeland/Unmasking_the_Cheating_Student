@@ -14,7 +14,7 @@ class BbcScraper(Scraper):
         # Base urls
         stem = "https://www.bbc.com/sitemaps/https-sitemap-com"
         #base_urls = [f"{stem}-archive-{i}.xml" for i in range(2,5)] # + [f"{stem}-news-{i}.xml" for i in range(1, 4)]]
-        base_urls = [f"https://www.bbc.com/sitemaps/https-sitemap-com-archive-{i}.xml" for i in range(7, 8)]   
+        base_urls = [f"https://www.bbc.com/sitemaps/https-sitemap-com-archive-{i}.xml" for i in range(13, 14)]   
         # Regex pattern for parsing the article urls
         regex_patterns = [r"https:\/\/www.bbc.com\/news\/[\d]{8}",
         r"https:\/\/www.bbc.com\/sport\/[\d]{8}",

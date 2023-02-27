@@ -47,6 +47,6 @@ class CnnScraper(Scraper):
 
         # Restricting collection to the first 10 relevant sitemaps
         print(article_sitemaps[1])
-        return article_sitemaps[10:30]
+        return article_sitemaps[30:40]
 
 CnnScraper(GET=True)
