@@ -1,0 +1,15 @@
+{
+    "dataset" : "data\\datasets\\books.csv",
+    "preprocessing_jobs" : null,
+    "balanced_classes" : false,
+    "chunk_size" : 500,
+    "chunk_type" : "sample_by_words",
+    "normalized_features" : false,
+    "number_of_features" : 250,
+    "build_author_curves" : false,
+    "save_author_curves" : "data//curves//test_curves_all.csv",
+    "load_author_curves" : "data//curves//curves.csv",
+    "C_parameter_curve_construction" : 0.5,
+    "C_parameter_curve_classification" : 0.5,
+    "kernel_type_curve_classification" : "linear"
+}
