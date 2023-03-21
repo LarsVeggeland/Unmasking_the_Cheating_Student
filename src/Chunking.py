@@ -12,16 +12,18 @@ import numpy as np
 
 class Chunking:
 
-    def __init__(self, size : int, type : list) -> None:
-        self.size = size
-        self.chunk_type = eval(f"self.{type}")
-
+    def __init__(self, conf : dict) -> None:
+        self.size = conf["size"]
+        self.type = conf['type']
+        
     
     def chunk_file(self, files : list) -> list:
         """
         Returns chunked versions of the provided files
         """
-        return self.chunk_type(files)
+        chunk_function = eval(f"self.{self.type}")
+        if self.type != "ngram": return self.chunk_type(files)
+
 
     
     def chunk_tokens(self, tokens : list) -> list:
