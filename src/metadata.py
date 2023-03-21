@@ -90,24 +90,24 @@ def authors_above_threshold(data : pd.DataFrame, words_threshold : int, article_
     return acceptable_authors
 
 
-def plot_author_article_count_groups(data : pd.DataFrame) -> None:
+def plot_author_article_count_groups(data : pd.DataFrame, log : bool, bins : int) -> None:
     x = [value for value in get_article_count_per_author(data).values()]
-    plt.xlabel("Number of articles written")
+    plt.xlabel("Number of books written")
     plt.ylabel("Number of authors")
 
-    plt.hist(x=x, bins=60, log=True)
+    plt.hist(x=x, bins=bins, log=log)
     plt.show()
 
 
-def plot_article_word_count_groups(data : pd.DataFrame) -> None:
+def plot_article_word_count_groups(data : pd.DataFrame, log : bool, bins : int) -> None:
     x = get_words_per_article(data)
-    x = x[x < 3000]
-    plt.xlabel("Article length in words")
+    #x = x[x < 3000]
+    plt.xlabel("Book length in words")
     plt.ylabel("Number of articles")
 
-    plt.hist(x=x, bins=50, log=False)
+    plt.hist(x=x, bins=bins, log=log)
     plt.show()
 
-data = get_data("data/datasets/articles.csv")
-#plot_author_article_count_groups(data)
-#plot_article_word_count_groups(data)
+data = get_data("data/datasets/books.csv")
+#plot_author_article_count_groups(data, False, 3)
+plot_article_word_count_groups(data, False, 8)
