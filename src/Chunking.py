@@ -13,20 +13,115 @@ import numpy as np
 class Chunking:
 
     def __init__(self, conf : dict) -> None:
-        self.size = conf["size"]
-        self.type = conf['type']
+        errors = []
+        try:
+            self.size = conf["size"]
+            assert(self.size > 0)
+        except AssertionError:
+            errors.append(f"Chunk size must be a positive integer not {self.size}")
+
+        try:
+            self.type = conf['type']
+            assert(self.type in ["words", "ngrams", "pos_tags", "lex_pos"])
+
+            if self.type == "ngram":
+                try:
+                    self.ngram_size = conf["ngram_size"]
+                    assert(self.ngram_size > 0 and isinstance(self.ngram_size, int))
+                except AssertionError:
+                    errors.append(f"ngram size must be a positive integer not {self.ngram_size}")
+                except KeyError:
+                        errors.append("Chunk type set to ngrams but ngram size is not defined in configuration file")
+        except AssertionError:
+            errors.append(f"The provided chunk type {self.type} does not exist")
+
+        try:
+            self.method = conf["method"]
+            assert(self.method in ["original", "bootstrap", "sliding_window"])
+        except AssertionError:
+            errors.append(f"The provided chunk method {self.method} does not exits")
         
+        if len(errors) > 0:
+            error_msg = "\n".join(errors)
+            raise AttributeError(f"There are issues with the provided configuration file:\n{error_msg}")
+        
+
+    def get_tokens(self, files :list) -> list:
+        """
+        Get the specified type of tokens from the file
+        """
+        token_function = eval(f"self.{self.type}")
+        return token_function(files)
     
-    def chunk_file(self, files : list) -> list:
+    
+    def chunk_files(self, files : list) -> list:
         """
         Returns chunked versions of the provided files
         """
-        chunk_function = eval(f"self.{self.type}")
-        if self.type != "ngram": return self.chunk_type(files)
+        tokens = self.get_tokens(files)
+        
+        if self.method == "original":
+            return self.original(tokens)
+
+        elif self.method == "bootstrap":
+            # TODO
+            return self.bootstrap(tokens, 25)
 
 
+    def words(self, data : list) -> list:
+        """
+        Partitions every provided file into chunks of a specified length
+        """
+        # First check if the provided is a single or list of files
+        filestream = self.get_filestream(data)
+        
+        # Get all the words in the stream in a list format
+        words = word_tokenize(filestream)
+
+        # Get the chunks
+        #chunks = self.chunk_tokens(tokens=words)
+
+        return words
+
+
+    def ngrams(self, data : list) -> list:
+        """
+        Partitions the file into n-gram chunks
+        """
+        # First check if the provided is a single or list of files
+        filestream = self.get_filestream(data)
+
+        # Get all the character n-grams from the filestream
+        grams = list(ngrams(filestream, self.ngram_size))[::self.ngram_size]
+
+        #grams = [None]*math.ceil(len(filestream)/ngram_length)
+        #for index, i in enumerate(range(0, len(filestream), ngram_length)):
+            #if i + ngram_length < len(filestream):
+                #grams[index] = filestream[i:i+ngram_length]
+            #else:
+                #grams[index] = filestream[i:] + " "*(len(filestream)-i)
+
+        # Get the chunks 
+        #chunks = self.chunk_tokens(tokens=grams)
+
+        return grams
     
-    def chunk_tokens(self, tokens : list) -> list:
+
+    def post_tags(self, data : list) -> list:
+        """
+        Partitions the file into pos tags
+        """
+        # First check if the provided is a single or list of files
+        filestream = self.get_filestream(data)
+
+        # Get all the pos tags from the filestream
+        tags = pos_tag(filestream)
+
+        # Get the chunks
+        #chunks = self.chunk_tokens(tags)
+
+
+    def original(self, tokens : list) -> list:
         """
         Partitions the tokens into chunks of the specified length
         """
@@ -41,61 +136,7 @@ class Chunking:
         
         return res
 
-
-    def sample_by_words(self, data : list) -> list:
-        """
-        Partitions every provided file into chunks of a specified length
-        """
-        # First check if the provided is a single or list of files
-        filestream = self.get_filestream(data)
-        
-        # Get all the words in the stream in a list format
-        words = word_tokenize(filestream)
-
-        # Get the chunks
-        chunks = self.chunk_tokens(tokens=words)
-
-        return chunks
-
-
-    def sample_by_ngrams(self, ngram_length : int, data : list) -> list:
-        """
-        Partitions the file into n-gram chunks
-        """
-        # First check if the provided is a single or list of files
-        filestream = self.get_filestream(data)
-
-        # Get all the character n-grams from the filestream
-        grams = list(ngrams(filestream, ngram_length))[::ngram_length]
-
-        #grams = [None]*math.ceil(len(filestream)/ngram_length)
-        #for index, i in enumerate(range(0, len(filestream), ngram_length)):
-            #if i + ngram_length < len(filestream):
-                #grams[index] = filestream[i:i+ngram_length]
-            #else:
-                #grams[index] = filestream[i:] + " "*(len(filestream)-i)
-
-        # Get the chunks 
-        chunks = self.chunk_tokens(tokens=grams)
-
-        return chunks
-    
-
-    def sample_by_post_tags(self, data : list) -> list:
-        """
-        Partitions the file into pos tags
-        """
-        # First check if the provided is a single or list of files
-        filestream = self.get_filestream(data)
-
-        # Get all the pos tags from the filestream
-        tags = pos_tag(filestream)
-
-        # Get the chunks
-        chunks = self.chunk_tokens(tags)
-
-
-    def bootstrap_sampling(self, data : list, chunk_count : int) -> list:
+    def bootstrap(self, data : list, chunk_count : int) -> list:
         """
         Uses the randomized bootstrap method for smapling chunks
         """
