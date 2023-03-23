@@ -51,11 +51,6 @@ class Pipeline:
                         normalized_features=self.settings["normalized_features"],
                         number_of_features=self.settings["number_of_features"],
                         C_parameter_curve_construction=self.settings["C_parameter_curve_construction"],
-                        C_parameter_curve_classification=self.settings["C_parameter_curve_classification"],
-                        kernel_type_curve_classification=self.settings["kernel_type_curve_classification"],
-                        build_author_curves=self.settings["build_author_curves"],
-                        save_author_curves=self.settings["save_author_curves"],
-                        load_author_curves=self.settings["load_author_curves"]
                     )
             
             self.author_curves = [None]*len(X_A)
