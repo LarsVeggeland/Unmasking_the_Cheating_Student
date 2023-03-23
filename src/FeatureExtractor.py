@@ -76,9 +76,9 @@ class FeatureExtractor:
         for i, token in enumerate(total_tokens):
             counts = 0,
             if token in counter_x.keys():
-                counts = counter_x[token]/len(tokens_X)
+                counts += counter_x[token]/len(tokens_X)
             if token in counter_a.keys():
-                counts = counter_a[token]/len(tokens_A)
+                counts += counter_a[token]/len(tokens_A)
             token_counts[i] = (token, counts)
         
         # Sort the tokens based on the absolute difference in frequency between X and A
