@@ -17,14 +17,12 @@ class Unmasking:
     def __init__(
                 self,
                 chunker : Chunking,
-                normalized_features : bool,
-                number_of_features : int,
-                C_parameter_curve_construction : float,
+                feature_extractor : FeatureExtractor,
+                C_parameter_curve_construction : float
             ) -> None:
 
         self.chunker = chunker
-        self.normalized_features = normalized_features
-        self.number_of_features=number_of_features
+        self.fe = feature_extractor
         self.C_parameter_curve_construction = C_parameter_curve_construction
 
 
@@ -48,11 +46,10 @@ class Unmasking:
             chunks_X = chunks_X[:len(chunks_A)]
 
         # Get the features from the chunks
-        features_X, features_A = self.extract_features(
-                    X=X, A=A,
-                    chunks_X=chunks_X,
-                    chunks_A=chunks_A
-                )
+        features_X, features_A = self.fe.extract_features(
+            chunks_X=chunks_X,
+            chunks_A=chunks_A
+       )
 
         # Perform chunk classification and retrieve results
         results = self.train_chunk_classifiers(
@@ -65,21 +62,6 @@ class Unmasking:
         author_curve = self.construct_author_curve(results=results)
 
         return author_curve
-    
-
-    def extract_features(self, X : str, A : list, chunks_X : list, chunks_A : list) -> tuple:
-        """
-        Retrieves the specified features from the provided data
-        """
-        extractor = FeatureExtractor()
-        return extractor.vectorize_chunks_by_n_most_frequent_weighted_words(
-                    n=self.number_of_features,
-                    X=X, 
-                    A=A, 
-                    chunks_X=chunks_X, 
-                    chunks_A=chunks_A,
-                    normalized=self.normalized_features
-                )
 
 
     def train_chunk_classifiers(self, features_to_be_eliminated : int, features_X : np.ndarray, features_A : np.ndarray) -> list:
