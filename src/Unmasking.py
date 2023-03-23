@@ -3,15 +3,11 @@
 from Chunking import Chunking
 from FeatureExtractor import FeatureExtractor
 import numpy as np
-from sklearn.model_selection import cross_val_predict, cross_val_score, StratifiedKFold, KFold
+from sklearn.model_selection import KFold
 from sklearn.svm import SVC
-from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.metrics import accuracy_score
 from random import shuffle
-import pandas as pd
-from matplotlib import pyplot as plt
-from collections import Counter
-from os import listdir
-from DataPreProcessing import PreProcessor
+
 
 
 #---------- Unmasking Class ----------
@@ -24,22 +20,12 @@ class Unmasking:
                 normalized_features : bool,
                 number_of_features : int,
                 C_parameter_curve_construction : float,
-                C_parameter_curve_classification : float,
-                kernel_type_curve_classification : str,
-                build_author_curves : bool,
-                save_author_curves : str,
-                load_author_curves : str
             ) -> None:
 
         self.chunker = chunker
         self.normalized_features = normalized_features
         self.number_of_features=number_of_features
         self.C_parameter_curve_construction = C_parameter_curve_construction
-        self.C_parameter_curve_classification = C_parameter_curve_classification
-        self.kernel_type_classification = kernel_type_curve_classification
-        self.build_author_curves = build_author_curves
-        self.save_author_curves = save_author_curves
-        self.load_author_curves = load_author_curves
 
 
     def handle_X_A_pair(
@@ -50,8 +36,8 @@ class Unmasking:
                 ) -> np.ndarray:
         
         # Get the chunks from X and A
-        chunks_X = chunks_X #self.chunk_samples(X, chunk_size=500)
-        chunks_A = self.chunker.chunk_file(A)
+        chunks_X = chunks_X
+        chunks_A = self.chunker.chunk_files(A)
 
         # Ensure that there are equally many chunks from X and A
         if len(chunks_A) > len(chunks_X):
@@ -80,15 +66,6 @@ class Unmasking:
 
         return author_curve
     
-
-    def chunk_samples(self, data : list, chunk_size : int) -> list:
-        """
-        Chunks all text samples in accordance with the specified approach
-        """
-        chunker = Chunking(chunk_size)
-        # Make this more configureable, i.e., utilize a similar approach as the preprocessor
-        #return chunker.sample_by_words(data)
-        return chunker.sample_by_words(data)
 
     def extract_features(self, X : str, A : list, chunks_X : list, chunks_A : list) -> tuple:
         """
