@@ -1,0 +1,27 @@
+{
+    "dataset" : "data/datasets/books.csv",
+    "word_cap" : 10000,
+    "file_partitions" : false,
+    "preprocessing_jobs" : null,
+    "balanced_classes" : false,
+
+    "chunk_config" : {
+        "size" : 500,
+        "type" : "words",
+        "method" : "original"
+    },
+
+    "feature_config" : {
+        "type" : "words",
+        "normalized" : false,
+        "number" : 250
+    },
+
+    "build_author_curves" : true,
+    "features_eliminated" : 3,
+    "save_author_curves" : "data//curves//KoppelOriginal10KCap.csv",
+    "load_author_curves" : "data//curves//KoppelOriginal10KCap.csv",
+    "C_parameter_curve_construction" : 0.5,
+    "C_parameter_curve_classification" : 0.5,
+    "kernel_type_curve_classification" : "linear"
+}
