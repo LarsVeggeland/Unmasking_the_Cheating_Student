@@ -25,6 +25,7 @@ def run_all_config_files_in_dir(dirname : str) -> None:
     for file in config_files:
         if file[-6:] != ".json":
             pass
+        print(f"Runnig pipeline configured by {file}")
         run_config(dirname + "/" + file)
 
     
