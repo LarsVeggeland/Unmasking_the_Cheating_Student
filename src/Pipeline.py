@@ -2,13 +2,14 @@
 
 import pandas as pd
 import numpy as np
-from random import randrange, random, shuffle
+from random import shuffle
 from copy import deepcopy
 from multiprocessing import Process, Queue
 from queue import Empty
 import json
 from DataPreProcessing import PreProcessor
 from Chunking import Chunking
+from FeatureExtractor import FeatureExtractor
 from Unmasking import Unmasking
 from Utils import get_time, print_progressbar
 from sklearn.svm import SVC
@@ -22,12 +23,14 @@ class Pipeline:
      
      def __init__(self, settings_file : str) -> None:
         # Load settings from config file
-        with open(f"conf\\{settings_file}", "r") as file:
+        with open(settings_file, "r") as file:
             self.settings = json.load(file)
         
         if self.settings["build_author_curves"] == True:
             # Load dataset from disk
             print(f"{get_time()} - Getting data from disk...")
+            self.word_cap = self.settings["word_cap"]
+            self.file_partitions = self.settings["file_partitions"]
             dataset = self.get_data(self.settings["dataset"])
             authors = dataset["authors"].to_list()
             files = dataset["articles"].to_list()
@@ -39,7 +42,13 @@ class Pipeline:
 
             # Get X and A pairs
             grouped_by_author = self.group_files_and_authors(authors, files)
-            self.chunker = Chunking(size=self.settings["chunk_size"], type=self.settings["chunk_type"])
+
+            # Configure chunking scheme
+            self.chunker = Chunking(conf=self.settings["chunk_config"])
+
+            # Configure feature extraction
+            self.feature_extractor = FeatureExtractor(conf=self.settings["feature_config"])
+
             if self.settings["balanced_classes"] == True:
                 X_A = self.create_X_A_pairs_balanced(grouped_by_author)
             else:
@@ -48,9 +57,9 @@ class Pipeline:
             # Specify the Unmasking model
             clf = Unmasking(
                         chunker=self.chunker,
-                        normalized_features=self.settings["normalized_features"],
-                        number_of_features=self.settings["number_of_features"],
-                        C_parameter_curve_construction=self.settings["C_parameter_curve_construction"],
+                        feature_extractor=self.feature_extractor,
+                        features_eliminated=self.settings["features_eliminated"],
+                        C_parameter_curve_construction=self.settings["C_parameter_curve_construction"]
                     )
             
             self.author_curves = [None]*len(X_A)
@@ -63,6 +72,7 @@ class Pipeline:
             print_progressbar(current_position=-1, length=len(X_A))
             processes = []
             queue = Queue()
+
             for i in range(10):
                 proc = Process(target=self.handle_block, args=(queue, blocks[i], clf))
                 processes.append(proc)
@@ -91,7 +101,7 @@ class Pipeline:
 
         if self.settings["save_author_curves"] and self.settings['build_author_curves']:
             print(f"{get_time()} -Saved the created author curves to {self.settings['save_author_curves']}")
-            self.save_author_curves(self.settings["save_author_curves"], labels, np.array(author_curves))
+            self.save_author_curves(self.settings["save_author_curves"], self.labels, np.array(self.author_curves))
         
         if self.settings["load_author_curves"] is not None:
             if self.settings["load_author_curves"] != self.settings['save_author_curves'] and self.settings['build_author_curves']:
@@ -116,7 +126,43 @@ class Pipeline:
 
      def get_data(self, filename : str) -> pd.DataFrame:
         try:
-            return pd.read_csv(filename, encoding="utf-8", encoding_errors="ignore")
+            data = pd.read_csv(filename, encoding="utf-8", encoding_errors="ignore")
+
+            # If there is no word cap the dataset is just returned as is
+            if self.word_cap is None:
+                return data
+            
+            # Get the different columns of the dataset
+            authors = data["authors"].to_list()
+            articles = data['articles'].to_list()
+
+            # If no file partition is defined each file is simply capped at the specified word count
+            if not self.file_partitions:
+                articles = [article[:self.word_cap] for article in articles]
+                data = pd.DataFrame({"authors" : authors, "articles" : articles})
+                return data
+            
+            # Define new columns for the partitioned dataset
+            partitoned_articles = []
+            partitoned_authors = []
+
+            for i, article in enumerate(articles):
+                author = authors[i]
+                article_parts = []
+                for j in range(0, len(article), self.word_cap):
+                    if j + self.file_partitions >= len(article):
+                        break
+                    # Retrieve a partition of the article
+                    article_parts.append(article[j:j+self.word_cap])
+
+                # Add all file partitions and the author to the new columns
+                partitoned_articles += article_parts
+                partitoned_authors += [author]*len(article_parts)
+            
+            data = pd.DataFrame({"authors" : partitoned_authors, "articles" : partitoned_articles})
+            return data
+                
+
         except FileNotFoundError:
             print(f"The file {filename} could not be found")
             exit(1)
@@ -148,7 +194,7 @@ class Pipeline:
             files = grouped_by_author[author]
             for i, file in enumerate(files):
                 # Chunk the file (X) here to avoid duplicate work later
-                chunked_file = self.chunker.chunk_file(file)
+                chunked_file = self.chunker.chunk_files(file)
                 for a in grouped_by_author.keys():
                     if a == author:
                         if len(files) > 1:
@@ -168,7 +214,7 @@ class Pipeline:
             files = grouped_by_author[author]
             for i, file in enumerate(files):
                 # Chunk the file (X) here to avoid duplicate work later
-                chunked_file = self.chunker.chunk_file(file)
+                chunked_file = self.chunker.chunk_files(file)
                 for a in grouped_by_author.keys():
                     if a == author:
                         if len(files) > 1:
@@ -240,8 +286,4 @@ class Pipeline:
         clf = SVC(kernel=kernel, C=C)
         scores = cross_val_score(clf, self.author_curves, self.labels, cv=5)
         return scores.mean()
-
-
-
-if __name__ == "__main__":      
-    p = Pipeline("default.json")
+     
