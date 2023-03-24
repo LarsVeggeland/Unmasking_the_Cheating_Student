@@ -18,11 +18,13 @@ class Unmasking:
                 self,
                 chunker : Chunking,
                 feature_extractor : FeatureExtractor,
+                features_eliminated : int,
                 C_parameter_curve_construction : float
             ) -> None:
 
         self.chunker = chunker
         self.fe = feature_extractor
+        self.features_eliminated = features_eliminated
         self.C_parameter_curve_construction = C_parameter_curve_construction
 
 
@@ -53,7 +55,6 @@ class Unmasking:
 
         # Perform chunk classification and retrieve results
         results = self.train_chunk_classifiers(
-                    features_to_be_eliminated=3,
                     features_X=features_X,
                     features_A=features_A
                 )
@@ -64,7 +65,7 @@ class Unmasking:
         return author_curve
 
 
-    def train_chunk_classifiers(self, features_to_be_eliminated : int, features_X : np.ndarray, features_A : np.ndarray) -> list:
+    def train_chunk_classifiers(self, features_X : np.ndarray, features_A : np.ndarray) -> list:
         """
         Trains a classifier for each of the 5 folds. Elinates the most positive and negative features for each elimination round
         """
@@ -77,7 +78,7 @@ class Unmasking:
         labels = np.concatenate((labels_X, labels_A), axis=None)
 
         # The number of elimiation rounds required for exhausting the feature set
-        elimination_rounds = int(chunks.shape[1]/(features_to_be_eliminated*2))
+        elimination_rounds = int(chunks.shape[1]/(self.features_eliminated*2))
 
         # The results array holding the classification performance for each round
         all_results = np.zeros(shape=(5, elimination_rounds))
@@ -90,7 +91,7 @@ class Unmasking:
             fold_chunks = np.array(chunks)
 
             for elim_round in range(elimination_rounds):
-                if chunks.shape[1] <= features_to_be_eliminated:
+                if chunks.shape[1] <= self.features_eliminated:
                     break
 
                 # Get train and test data
@@ -107,24 +108,22 @@ class Unmasking:
                 all_results[fold_index, elim_round] = score
 
                 # Eliminate the most positive and negatve features for the model from fold_chunks
-                fold_chunks = self.feature_elimination(n_features=features_to_be_eliminated, 
-                                                  chunks=fold_chunks, 
-                                                  clf=clf
-                                                )
+                fold_chunks = self.feature_elimination(chunks=fold_chunks, clf=clf)
+
         # Calculate and return the mean accuracy for each elimination round for all folds
         results = np.mean(all_results, axis=0)
         return results
 
     
-    def feature_elimination(self, n_features : int, chunks : np.ndarray, clf) -> np.ndarray:
+    def feature_elimination(self, chunks : np.ndarray, clf) -> np.ndarray:
         """
         Removes the n first/most positively weighted features from each chunk
         """
         # Find the most important features for the provided model
         coefs = clf.coef_
         features = np.argsort(coefs)
-        most_negative = features[:,:n_features]
-        most_positive = features[:,features.shape[1]-n_features:]
+        most_negative = features[:,:self.features_eliminated]
+        most_positive = features[:,features.shape[1]-self.features_eliminated:]
 
         # Determines the index of the most negative and positive coeficients
         features_to_be_removed = np.concatenate((most_negative, most_positive), axis=None)
