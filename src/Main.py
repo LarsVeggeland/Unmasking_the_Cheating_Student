@@ -41,7 +41,7 @@ def __main__(source : str) -> None:
     elif path.isfile(source):
         run_config(source)
     else:
-        print(f"ERROR: {source} is neither a file nor directory")
+        print(f"\nERROR: {source} is neither a file nor directory")
         exit(1)
     
 
