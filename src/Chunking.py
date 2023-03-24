@@ -24,7 +24,7 @@ class Chunking:
             self.type = conf['type']
             assert(self.type in ["words", "ngrams", "pos_tags", "lex_pos"])
 
-            if self.type == "ngram":
+            if self.type == "ngrams":
                 try:
                     self.ngram_size = conf["ngram_size"]
                     assert(self.ngram_size > 0 and isinstance(self.ngram_size, int))
