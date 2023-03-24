@@ -25,7 +25,7 @@ def run_all_config_files_in_dir(dirname : str) -> None:
     for file in config_files:
         if file[-6:] != ".json":
             pass
-        print(f"Runnig pipeline configured by {file}")
+        print(f"\nRunnig pipeline configured by {file}")
         run_config(dirname + "/" + file)
 
     
@@ -41,7 +41,7 @@ def __main__(source : str) -> None:
     elif path.isfile(source):
         run_config(source)
     else:
-        print(f"\nERROR: {source} is neither a file nor directory")
+        print(f"ERROR: {source} is neither a file nor directory")
         exit(1)
     
 
