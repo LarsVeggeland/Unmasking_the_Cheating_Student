@@ -107,18 +107,34 @@ class Chunking:
         return grams
     
 
-    def post_tags(self, data : list) -> list:
+    def pos_tags(self, data : list) -> list:
         """
-        Partitions the file into pos tags
+        Partitions the file into PoS tags
         """
         # First check if the provided is a single or list of files
         filestream = self.get_filestream(data)
 
         # Get all the pos tags from the filestream
-        tags = pos_tag(filestream)
+        tags = [tag[1] for tag in pos_tag(word_tokenize(filestream))]
+
+        return tags
 
         # Get the chunks
         #chunks = self.chunk_tokens(tags)
+
+    
+    def lex_pos(self, data : list) -> list:
+        """
+        Partitions the file into lexpos tags
+        """
+        # First check if the provided is a single or list of files
+        filestream = self.get_filestream(data)
+
+        # Get all the pos tags from the filestream
+        tags =  pos_tag(word_tokenize(filestream))
+        lexpos = [f"{tag[0]}_{tag[1]}" for tag in tags]
+
+        return lexpos
 
 
     def original(self, tokens : list) -> list:
@@ -176,3 +192,4 @@ class Chunking:
             file_stream = data
 
         return file_stream
+    
