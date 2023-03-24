@@ -7,14 +7,14 @@ from copy import deepcopy
 from multiprocessing import Process, Queue
 from queue import Empty
 import json
+from nltk.tokenize import word_tokenize
+from sklearn.svm import SVC
+from sklearn.model_selection import cross_val_score
 from DataPreProcessing import PreProcessor
 from Chunking import Chunking
 from FeatureExtractor import FeatureExtractor
 from Unmasking import Unmasking
 from Utils import get_time, print_progressbar
-from sklearn.svm import SVC
-from sklearn.model_selection import cross_val_score
-
 
 
 #---------- Pipeline ----------
@@ -138,7 +138,7 @@ class Pipeline:
 
             # If no file partition is defined each file is simply capped at the specified word count
             if not self.file_partitions:
-                articles = [article[:self.word_cap] for article in articles]
+                articles = " ".join([word_tokenize(article)[:self.word_cap] for article in articles])
                 data = pd.DataFrame({"authors" : authors, "articles" : articles})
                 return data
             
