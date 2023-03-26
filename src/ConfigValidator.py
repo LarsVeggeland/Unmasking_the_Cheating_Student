@@ -56,8 +56,38 @@ def vaildate_dataset_fields(dataset : str, word_cap : int, file_partitions : boo
 
 
 def validate_chunk_fields(conf : dict) -> list:
-    # TODO
-    pass
+    """
+    Checks whether all the chunk related fields are correctly defined
+    """
+    errors = []
+    try:
+        size = conf["size"]
+        assert(size > 0)
+    except AssertionError:
+        errors.append(f"Chunk size must be a positive integer not {size}")
+
+    try:
+        type = conf['type']
+        assert(type in ["words", "ngrams", "pos_tags", "lex_pos"])
+
+        if type == "ngrams":
+            try:
+                ngram_size = conf["ngram_size"]
+                assert(ngram_size > 0 and isinstance(ngram_size, int))
+            except AssertionError:
+                errors.append(f"ngram size must be a positive integer not {self.ngram_size}")
+            except KeyError:
+                    errors.append("Chunk type set to ngrams but ngram size is not defined in configuration file")
+    except AssertionError:
+        errors.append(f"The provided chunk type {type} does not exist")
+
+    try:
+        method = conf["method"]
+        assert(method in ["original", "bootstrap", "sliding_window"])
+    except AssertionError:
+        errors.append(f"The provided chunk method {method} does not exits")
+    
+    return errors
 
 
 def validate_feature_extractor_fields(conf : dict) -> list:
