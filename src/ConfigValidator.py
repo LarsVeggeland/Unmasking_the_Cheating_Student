@@ -91,8 +91,33 @@ def validate_chunk_fields(conf : dict) -> list:
 
 
 def validate_feature_extractor_fields(conf : dict) -> list:
-    # TODO
-    pass
+    """
+    Checks the validity of the fields related to feature extraction
+    """
+    errors = []
+    try:
+        type = conf["type"]
+        assert(type in ["words", "ngrams", "pos_tags", "lex_pos"])
+    except AssertionError:
+        errors.append(f"The provided feature type {type} does not exist")
+    except KeyError:
+        errors.append(f'The mandatory field "type" has been omitted from the configuration file')
+
+    try:
+        normalized = conf["normalized"]
+        assert(isinstance(normalized, bool))
+    except AssertionError:
+        errors.append(f"The field normalized must be a boolean not {type(normalized)}")
+    except KeyError:
+        errors.append(f'The mandatory field "normalized" has been omitted from the configuration file')
+            
+    try:
+        number = conf["number"]
+        assert(isinstance(number, int) and number > 0)
+    except AssertionError:
+        errors.append(f"The field number must be a positive integer not {number}")
+    except KeyError:
+        errors.append(f'The mandatory field "number" has been omitted from the configuration file')
 
 
 def validate_curve_related_fields(conf : dict) -> list:
