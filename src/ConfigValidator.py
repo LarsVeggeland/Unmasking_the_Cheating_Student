@@ -75,7 +75,7 @@ def validate_chunk_fields(conf : dict) -> list:
                 ngram_size = conf["ngram_size"]
                 assert(ngram_size > 0 and isinstance(ngram_size, int))
             except AssertionError:
-                errors.append(f"ngram size must be a positive integer not {self.ngram_size}")
+                errors.append(f"ngram size must be a positive integer not {ngram_size}")
             except KeyError:
                     errors.append("Chunk type set to ngrams but ngram size is not defined in configuration file")
     except AssertionError:
