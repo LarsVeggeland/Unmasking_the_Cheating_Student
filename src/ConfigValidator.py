@@ -236,8 +236,3 @@ def validate_config_file(filename : str) -> bool:
 
     print(f"There are issues with the provided configuration file {filename}:\n{error_msg}")
     return False
-
-
-file = "conf/test.json"
-
-print(validate_config_file(file))
