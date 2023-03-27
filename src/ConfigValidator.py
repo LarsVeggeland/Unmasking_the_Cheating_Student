@@ -155,14 +155,14 @@ def validate_curve_related_fields(build : bool, eliminate : int, save : str, loa
     try:
         assert(isinstance(C_cons, float), f"The field 'C_parameter_curve_construction' must be a float not {type(C_cons)}")
         # C can be larger than 1, but that would be weird...
-        assert(C_cons =< 1 and C_cons >= 0, f"The field 'C_parameter_curve_construction' must be in the range [0, 1] not {C_cons}")    
+        assert(C_cons <= 1 and C_cons >= 0, f"The field 'C_parameter_curve_construction' must be in the range [0, 1] not {C_cons}")    
     except AssertionError as e:
         errors.append(e)
 
     try:
         assert(isinstance(C_class, float), f"The field 'C_parameter_curve_classification' must be a float not {type(C_cons)}")
         # C can be larger than 1, but that would be weird...
-        assert(C_class =< 1 and C_class >= 0, f"The field 'C_parameter_curve_classification' must be in the range [0, 1] not {C_class}")    
+        assert(C_class <= 1 and C_class >= 0, f"The field 'C_parameter_curve_classification' must be in the range [0, 1] not {C_class}")    
     except AssertionError as e:
         errors.append(e)
 
