@@ -1,0 +1,27 @@
+{
+    "dataset" : null,
+    "word_cap" : -1,
+    "file_partitions" : null,
+    "preprocessing_jobs" : null,
+    "balanced_classes" : null,
+
+    "chunk_config" : {
+        "size" : null,
+        "type" : null,
+        "method" : null
+    },
+
+    "feature_config" : {
+        "type" : null,
+        "normalized" : null,
+        "number" : null
+    },
+
+    "build_author_curves" : null,
+    "features_eliminated" : null,
+    "save_author_curves" : null,
+    "load_author_curves" : null,
+    "C_parameter_curve_construction" : null,
+    "C_parameter_curve_classification" : null,
+    "kernel_type_curve_classification" : null
+}
