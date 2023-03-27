@@ -1,7 +1,7 @@
 # ---------- Imported libraries --------
 
 from json import load as json_load
-from itertools import chain
+
 
 
 # ---------- Util functions ----------
