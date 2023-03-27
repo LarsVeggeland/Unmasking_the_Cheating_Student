@@ -115,7 +115,7 @@ class Chunking:
         filestream = self.get_filestream(data)
 
         # Get all the pos tags from the filestream
-        tags = [tag[1] for tag in pos_tag(word_tokenize(filestream))]
+        tags = [f"{tag[1]}" for tag in pos_tag(word_tokenize(filestream))]
 
         return tags
 
