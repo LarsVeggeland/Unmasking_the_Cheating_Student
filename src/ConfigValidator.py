@@ -31,15 +31,11 @@ def vaildate_dataset_fields(dataset, word_cap, file_partitions, balanced_classes
         errors.append(e)
 
     try:
-        assert isinstance(file_partitions, bool)
-    except AssertionError:
-        errors.append(f"The field 'file_partitions' must be defined as either true or false not {file_partitions} of type {type(file_partitions)}")
-    
-    try:
+        assert isinstance(file_partitions, bool), f"The field 'file_partitions' must be defined as either true or false not {file_partitions} of type {type(file_partitions)}"
         if not isinstance(word_cap, int):
-            assert file_partitions == False
-    except AssertionError:
-        errors.append(f"Cannot set 'file_partitions' to true when when no word cap is enforced")
+            assert file_partitions == False, "Cannot set 'file_partitions' to true when when no word cap is enforced"
+    except AssertionError as e:
+        errors.append(e)
     
     try:
         assert isinstance(balanced_classes, bool)
