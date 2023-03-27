@@ -2,6 +2,7 @@
 
 from os import listdir, path
 from Pipeline import Pipeline
+from ConfigValidator import validate_config_file
 
 
 
@@ -12,7 +13,8 @@ def run_config(filename : str) -> None:
     Configures and runs an instance of the Pipeline
     based on the provided config file
     """
-    Pipeline(settings_file=filename)
+    if validate_config_file(filename):
+        Pipeline(settings_file=filename)
 
 
 def run_all_config_files_in_dir(dirname : str) -> None:
@@ -46,4 +48,4 @@ def __main__(source : str) -> None:
     
 
 if __name__ == "__main__":
-    __main__("conf\PreliminaryTesting")
+    __main__("conf/test.json")
