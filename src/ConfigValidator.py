@@ -24,15 +24,11 @@ def vaildate_dataset_fields(dataset, word_cap, file_partitions, balanced_classes
         errors.append(f"The provided dataset {dataset} could not be found in the filesystem")
 
     try:
-        assert word_cap is None or isinstance(word_cap, int)
-    except AssertionError:
-        errors.append(f"The word cap must be null or an integer not {type(word_cap)}")
-
-    try:
+        assert word_cap is None or isinstance(word_cap, int), f"The word cap must be null or an integer not {type(word_cap)}"
         if isinstance(word_cap, int):
-            assert word_cap > 0
-    except AssertionError:
-        errors.append(f"If not null the word cap must be a positive integer not {word_cap}")
+            assert word_cap > 0, f"If not null the word cap must be a positive integer not {word_cap}"
+    except AssertionError as e:
+        errors.append(e)
 
     try:
         assert isinstance(file_partitions, bool)
