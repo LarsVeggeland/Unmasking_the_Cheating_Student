@@ -52,30 +52,31 @@ def validate_chunk_fields(conf : dict) -> list:
     errors = []
     try:
         size = conf["size"]
+        assert isinstance(size, int)
         assert size > 0
     except AssertionError:
         errors.append(f"Chunk size must be a positive integer not {size}")
 
     try:
         type = conf['type']
-        assert type in ["words", "ngrams", "pos_tags", "lex_pos"] 
+        types = ["words", "ngrams", "pos_tags", "lex_pos"]
+        assert type in types, f"The provided chunk type {type} does not exist. Must be among {' '.join(types)}"
 
         if type == "ngrams":
-            try:
-                ngram_size = conf["ngram_size"]
-                assert ngram_size > 0 and isinstance(ngram_size, int)
-            except AssertionError:
-                errors.append(f"ngram size must be a positive integer not {ngram_size}")
-            except KeyError:
-                    errors.append("Chunk type set to ngrams but ngram size is not defined in configuration file")
-    except AssertionError:
-        errors.append(f"The provided chunk type {type} does not exist")
+            ngram_size = conf["ngram_size"]
+            assert isinstance(ngram_size, int), f"ngram size must be a positive integer not {ngram_size}"
+            assert ngram_size > 0, f"ngram size must be a positive integer not {ngram_size}"
+    except AssertionError as e:
+        errors.append(e)
+    except KeyError:
+        errors.append("Chunk type set to ngrams but the field 'ngram_size' is not defined in configuration file")
 
     try:
         method = conf["method"]
-        assert method in ["original", "bootstrap", "sliding_window"]
+        methods = ["original", "bootstrap", "sliding_window"]
+        assert method in methods
     except AssertionError:
-        errors.append(f"The provided chunk method {method} does not exits")
+        errors.append(f"The provided chunk method {method} does not exits. Must be among {' '.join(methods)}")
     
     return errors
 
