@@ -142,12 +142,26 @@ def validate_curve_related_fields(build : bool, eliminate : int, save : str, loa
     
     try:
         assert(isinstance(build, bool))
+    except AssertionError:
+        errors.append(f"The field 'build_author_curves' must be a boolean, not {type(build)}")
+
+    try:
+        assert(isinstance(load, str), f"The field specifying the source file for loading the author curves must be a string not {type(save)}")
+        assert(len(load) > 4, "The source file for loading the author curves is not defined")
+        assert(load[-4:] == ".csv", f"The provided source file for the loaded author curves {load} is not a csv file")
+        if not build:
+            with open(load, "r") as file:
+                pass
+    except AssertionError as e:
+        errors.append(e)
+    except FileNotFoundError:
+        errors.append(f"The config file specifies that no author curves are to be constructed, however, the target file for loading the preconstructed author curves {load} cannot be found.")
+
+    try:
         if build:
             assert(isinstance(save, str), f"The field specifying the target file for saving the created author curves must be a string not {type(save)}")
             assert(len(save) > 4, "The target file for saving the created author curves is not defined")
-            assert(save[-4:] == ".csv", f"The provided dataset {save} is not a csv file")
-            assert(isinstance(load, str), f"The field specifying the source file for loading the author curves must be a string not {type(save)}")
-            assert(len(load) > 4, "The source file for loading the author curves is not defined")
+            assert(save[-4:] == ".csv", f"The provided target file for saving the author curves {save} is not a csv file")
             assert(save == load, f"Inconsistency between the author curves created and the ones used during testing. Not loading the created author curves {save} =/= {load}")
     except AssertionError as e:
         errors.append(e)
