@@ -1,11 +1,11 @@
 # ---------- Imported libraries --------
 
-from json import loads
+from json import load as json_load
 
 
 # ---------- Util functions ----------
 
-def vaildate_dataset_fields(dataset : str, word_cap : int, file_partitions : bool, balanced_classes : bool) -> list:
+def vaildate_dataset_fields(dataset, word_cap, file_partitions, balanced_classes) -> list:
     """
     Checks whether all the datset related fields in the provided config file have appropriate values
     """
@@ -121,7 +121,7 @@ def validate_feature_extractor_fields(conf : dict) -> list:
         errors.append(f'The mandatory field "number" has been omitted from the configuration file')
 
 
-def validate_curve_related_fields(build : bool, eliminate : int, save : str, load : str, C_cons : float, C_class : float, kernel : str) -> list:
+def validate_curve_related_fields(build, eliminate, save, load, C_cons, C_class, kernel) -> list:
     errors = []
 
     try:
@@ -195,7 +195,7 @@ def validate_curve_related_fields(build : bool, eliminate : int, save : str, loa
 
 def validate_config_file(filename : str) -> bool:
     with open(filename, "r") as file:
-        config_file : dict = loads(file)
+        config_file : dict = json_load(file)
     
     dataset = config_file["dataset"]
     word_cap = config_file["word_cap"]
@@ -234,3 +234,8 @@ def validate_config_file(filename : str) -> bool:
 
     print(f"There are issues with the provided configuration file {filename}:\n{error_msg}")
     return False
+
+
+file = "conf/test.json"
+
+print(validate_config_file(file))
