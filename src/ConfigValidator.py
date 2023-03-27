@@ -11,6 +11,7 @@ def vaildate_dataset_fields(dataset, word_cap, file_partitions, balanced_classes
     """
     errors = []
     try:
+        assert(isinstance(dataset, str))
         assert(len(dataset) > 0)
     except AssertionError:
         errors.append(f"No datatset specified")
@@ -206,7 +207,7 @@ def validate_config_file(filename : str) -> bool:
     feature_config = config_file["feature_config"]
 
     build = config_file["build_author_curves"]
-    eliminate = config_file["eliminate"]
+    eliminate = config_file["features_eliminated" ]
     save = config_file["save_author_curves"]
     load = config_file["load_author_curves"]
     C_cons = config_file["C_parameter_curve_construction"]
