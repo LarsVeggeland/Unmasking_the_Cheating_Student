@@ -138,7 +138,7 @@ class Pipeline:
 
             # If no file partition is defined each file is simply capped at the specified word count
             if not self.file_partitions:
-                articles = " ".join([word_tokenize(article)[:self.word_cap] for article in articles])
+                articles = [" ".join(word_tokenize(article)[:self.word_cap]) for article in articles]
                 data = pd.DataFrame({"authors" : authors, "articles" : articles})
                 return data
             
