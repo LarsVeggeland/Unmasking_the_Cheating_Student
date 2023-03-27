@@ -13,11 +13,13 @@ def vaildate_dataset_fields(dataset, word_cap, file_partitions, balanced_classes
     try:
         assert isinstance(dataset, str), f"No datatset specified"
         assert len(dataset) > 0, f"No datatset specified"
+        assert dataset[-4:] == ".csv", f"The provided dataset {dataset} is not a csv file"
         with open(dataset, "r") as file:
             pass
-        assert dataset[-4:] == ".csv", f"The provided dataset {dataset} is not a csv file"
     except AssertionError as e:
         errors.append(e)
+    except IndexError:
+        errors.append(f"The provided dataset {dataset} is not a csv file")
     except FileNotFoundError:
         errors.append(f"The provided dataset {dataset} could not be found in the filesystem")
 
