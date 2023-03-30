@@ -19,8 +19,8 @@
 
     "build_author_curves" : true,
     "features_eliminated" : 3,
-    "save_author_curves" : "data//curves//KoppelOriginal.csv",
-    "load_author_curves" : "data//curves//KoppelOriginal.csv",
+    "save_author_curves" : "data//curves//default.csv",
+    "load_author_curves" : "data//curves//default.csv",
     "C_parameter_curve_construction" : 0.5,
     "C_parameter_curve_classification" : 0.5,
     "kernel_type_curve_classification" : "linear"
