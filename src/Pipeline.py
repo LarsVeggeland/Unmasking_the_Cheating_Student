@@ -100,7 +100,7 @@ class Pipeline:
             print(f"{get_time()} - Author curves have been sucesfully constructed")
 
         if self.settings["save_author_curves"] and self.settings['build_author_curves']:
-            print(f"{get_time()} -Saved the created author curves to {self.settings['save_author_curves']}")
+            print(f"{get_time()} - Saved the created author curves to {self.settings['save_author_curves']}")
             self.save_author_curves(self.settings["save_author_curves"], self.labels, np.array(self.author_curves))
         
         if self.settings["load_author_curves"] is not None:
