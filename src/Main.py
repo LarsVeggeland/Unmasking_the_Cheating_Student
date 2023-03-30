@@ -3,6 +3,7 @@
 from os import listdir, path
 from Pipeline import Pipeline
 from ConfigValidator import validate_config_file
+from Utils import get_time
 
 
 
@@ -13,6 +14,9 @@ def run_config(filename : str) -> None:
     Configures and runs an instance of the Pipeline
     based on the provided config file
     """
+     
+    print(f"\nRunning pipeline configured by {filename}")
+    print(f"{get_time()} - Validating {filename}...")
     if validate_config_file(filename):
         Pipeline(settings_file=filename)
 
@@ -27,7 +31,6 @@ def run_all_config_files_in_dir(dirname : str) -> None:
     for file in config_files:
         if file[-6:] != ".json":
             pass
-        print(f"\nRunnig pipeline configured by {file}")
         run_config(dirname + "/" + file)
 
     
@@ -48,4 +51,4 @@ def __main__(source : str) -> None:
     
 
 if __name__ == "__main__":
-    __main__("conf/test.json")
+    __main__("conf/PreliminaryTesting/OriginalPoSBalanced.json")
