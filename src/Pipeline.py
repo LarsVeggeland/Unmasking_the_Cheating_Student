@@ -97,10 +97,13 @@ class Pipeline:
                     # This is ignored
                     pass
             
+            self.author_curves = self.normalize_author_curves(self.author_curves)
+
             print(f"{get_time()} - Author curves have been sucesfully constructed")
 
         if self.settings["save_author_curves"] and self.settings['build_author_curves']:
             print(f"{get_time()} - Saved the created author curves to {self.settings['save_author_curves']}")
+            
             self.save_author_curves(self.settings["save_author_curves"], self.labels, np.array(self.author_curves))
         
         if self.settings["load_author_curves"] is not None:
@@ -275,6 +278,37 @@ class Pipeline:
          author_curves = df.iloc[:,1:].to_numpy()
          
          return (labels, author_curves)
+     
+
+     def normalize_author_curves(self, curves : list) -> np.array:
+         """
+         Normalizes curve shapes by reverse engineering the author curves with more than the smalles amount of features
+         This means that data obtained from some of the last elimination rounds for some curves are droppped
+         """
+         shapes = [curve.shape[0] for curve in curves]
+         if not max(shapes) - min(shapes):
+             return curves
+         
+         min_shape = min(shapes)
+
+         features_specified = self.feature_extractor.number
+         print(f"WARNING! - There are text pairs where the total number of feauter are less than the {features_specified} features specifified in the config file.")
+         print(f"The smallest number features extracted from a text pair is : {int((min_shape + 3)/3)}.")
+         print("An effort will be made to normalize the created author curves. This means that data from some elimination rounds will be dropped.")
+         for i, curve in enumerate(curves):
+            delta = int((curve.shape[0]+3)/3) - int((min_shape+3)/3)
+            if delta:
+                acc_len = int((curve.shape[0] + 3)/3)
+                n1_len = 2*acc_len - 1
+                n2_len = 3*acc_len - 3
+
+                acc_part = curve[0:acc_len-delta]
+                n1_part = curve[acc_len:n1_len-delta]
+                n2_part = curve[n1_len:n2_len-delta]
+                drops = curve[-2:]
+                curves[i] = np.concatenate([acc_part, n1_part, n2_part, drops])
+    
+         return curves
 
     
      def classify_curves(self, kernel : str, C : float) -> None:
