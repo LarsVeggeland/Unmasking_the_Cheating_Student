@@ -15,6 +15,8 @@ from Chunking import Chunking
 from FeatureExtractor import FeatureExtractor
 from Unmasking import Unmasking
 from Utils import get_time, print_progressbar
+from CurveClassification import CurveClassification
+
 
 
 #---------- Pipeline ----------
@@ -111,17 +113,25 @@ class Pipeline:
                 print("WARNING!\nYou are currently not verifying the performance of the author curves just constructed.")
                 print(f"You are saving the curves to {self.settings['save_author_curves']} but loading curves from another file {self.settings['load_author_curves']} for curve classification")
                 exit(1)
-            
-            print(f"{get_time()} - Author curves loaded from {self.settings['load_author_curves']}")
-            self.labels, self.author_curves = self.load_author_curves(self.settings["load_author_curves"])
+        
 
+        # Load the curves
+        print(f"{get_time()} - Author curves loaded from {self.settings['load_author_curves']}")
+        self.labels, self.author_curves = self.load_author_curves(self.settings["load_author_curves"])
 
-            # Train the author curve verification model
-            accuracy = self.classify_curves(
-                    kernel=self.settings["kernel_type_curve_classification"],
-                    C=self.settings["C_parameter_curve_classification"]
-                )
-            print(f"Accuracy for the author curve classifier: {round(accuracy*100, 2)} %")
+        # Train the author curve verification model
+        curve_classifier = CurveClassification(conf={
+                                                    "C" : self.settings["C_parameter_curve_classification"],
+                                                    "kernel_type" : self.settings["kernel_type_curve_classification"],
+                                                    "model" : self.settings["model"],
+                                                    "class" : self.settings["class"],
+                                                    "max_dims" : self.settings["max_dims"],
+                                                    "confidence" : self.settings["confidence"]
+                                                    })
+        accuracy = curve_classifier.classify_curves(author_curves=self.author_curves,
+                                                    labels=self.labels)
+        
+        print(f"Accuracy for the author curve classifier: {round(accuracy*100, 2)} %")
         
 
 
