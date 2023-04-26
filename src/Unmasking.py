@@ -101,7 +101,7 @@ class Unmasking:
                 y_test = labels[test_index]
 
                 # Specify, train, and test the model
-                clf = SVC(kernel="linear")
+                clf = SVC(kernel="linear", C=self.C_parameter_curve_construction)
                 clf.fit(X_train, y_train)
                 pred = clf.predict(X_test)
                 score = accuracy_score(y_test, pred)
