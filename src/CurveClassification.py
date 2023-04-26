@@ -5,6 +5,7 @@ from sklearn.svm import SVC, OneClassSVM
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.decomposition import PCA
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 
 
@@ -26,6 +27,7 @@ class CurveClassification:
         self.kernel_type = conf["kernel_type"]
         self._class = conf["class"]
         self.max_dims = conf["max_dims"]
+        self.confidence = conf["confidence"]
         self.model = None
 
         
@@ -46,6 +48,8 @@ class CurveClassification:
             The average accuracy across the 5 folds.
         """
         print(author_curves.shape)
+        #vif = self.calculate_vif(author_curves)
+        #print(vif)
         k_fold = KFold(n_splits=5, shuffle=True, random_state=42)
         accuracy_values = []
         fold_results = []
@@ -70,13 +74,20 @@ class CurveClassification:
 
             # Set the model
             if self.isBinary:
-                self.model = SVC(C=self.C, kernel=self.kernel_type)
+                if self.confidence is None:
+                    self.model = SVC(C=self.C, kernel=self.kernel_type)
+                else:
+                    self.model = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma="auto")
             else:
                 self.model = OneClassSVM(nu=self.C, kernel=self.kernel_type, gamma="auto")
 
-            # Train and test the model on this fold
+            # Train and test the model on this fold 
             self.model.fit(X_train, y_train)
-            y_pred = self.model.predict(X_test)
+
+            if self.confidence is None:
+                y_pred = self.model.predict(X_test)
+            else:
+                y_pred = self.svm_threshold_classifier(X_train, y_train, X_test)
             y_pred = [int(i==1) for i in y_pred]
 
 
@@ -133,6 +144,32 @@ class CurveClassification:
         return aggregate_tp, aggregate_fp, aggregate_tn, aggregate_fn
     
 
+    def svm_threshold_classifier(self, X_train, y_train, X_test):
+        """
+        Trains an SVM classifier and makes predictions using a threshold.
+        
+        Parameters:
+            X_train (numpy array): The feature matrix for training data.
+            y_train (numpy array): The label vector for training data.
+            X_test (numpy array): The feature matrix for testing data.
+            threshold (float): The decision threshold for classifying predictions as 0.
+            
+        Returns:
+            numpy array: The predicted labels for the testing data.
+        """
+        # Train the SVM classifier
+        svm = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma="auto")
+        svm.fit(X_train, y_train)
+        
+        # Get the predicted probabilities for the test data
+        probabilities = svm.predict_proba(X_test)
+        
+        # Apply the threshold to the probabilities and classify the predictions
+        predictions = np.where(probabilities[:, 0] <= 0.5 + self.confidence, 1, 0)
+        
+        return predictions
+    
+
     def invert_list(self, input_list : np.array) -> np.array:
         """
         Inverts all entries in a list of 1's and 0's.
@@ -151,3 +188,8 @@ class CurveClassification:
         pca = PCA(n_components=self.max_dims)
         reduced_features = pca.fit_transform(features)
         return reduced_features
+    
+
+    def calculate_vif(self, features):
+        vif = [variance_inflation_factor(features, i) for i in range(features.shape[1])]
+        return vif
