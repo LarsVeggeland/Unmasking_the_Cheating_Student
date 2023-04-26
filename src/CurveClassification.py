@@ -2,7 +2,7 @@
 
 import numpy as np
 from sklearn.svm import SVC, OneClassSVM
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
 
 
@@ -21,13 +21,10 @@ class CurveClassification:
             A dictionary containing configuration information for the class.
         """
         self.C = conf["C"]
-        kernel_type = conf["kernel_type"]
-
-        if conf["model"] == "two-class":
-            self.model = SVC(C=self.C, kernel=kernel_type)
-        else:
-            self.model = OneClassSVM(nu=self.C, kernel=kernel_type)
-            self._class = conf["class"]
+        self.isBinary = conf["model"] == "two-class"
+        self.kernel_type = conf["kernel_type"]
+        self._class = conf["class"]
+        self.model = None
 
         
     def classify_curves(self, author_curves, labels):
@@ -49,17 +46,42 @@ class CurveClassification:
         k_fold = KFold(n_splits=5, shuffle=True, random_state=42)
         accuracy_values = []
         fold_results = []
+        invert = False
+
+        if not self.isBinary:
+            # We must alter the labels based on the target class
+            if self._class == "different":
+                # If different we must flip the labels
+                labels = np.array([int(i==0) for i in labels], dtype=np.float32)
+                invert = True
+
+
 
         for train_index, test_index in k_fold.split(author_curves):
+            # Split data
             X_train, X_test = author_curves[train_index], author_curves[test_index]
             y_train, y_test = labels[train_index], labels[test_index]
 
+            # Set the model
+            if self.isBinary:
+                self.model = SVC(C=self.C, kernel=self.kernel_type)
+            else:
+                self.model = OneClassSVM(nu=self.C, kernel=self.kernel_type, gamma="auto")
+
+            # Train and test the model on this fold
             self.model.fit(X_train, y_train)
             y_pred = self.model.predict(X_test)
+            y_pred = [int(i==1) for i in y_pred]
+
+
+            if invert:
+                y_test = self.invert_list(y_test)
+                y_pred = self.invert_list(y_pred)
 
             accuracy = accuracy_score(y_test, y_pred)
             accuracy_values.append(accuracy)
             fold_results.append((y_test, y_pred))
+
 
         tp, fp, tn, fn = self.calculate_metrics(fold_results)
         print("Aggregate True Positives:", tp)
@@ -68,8 +90,6 @@ class CurveClassification:
         print("Aggregate False Negatives:", fn)
 
         return np.mean(accuracy_values)
-
-    # ... (calculate_metrics method here)
 
 
     def calculate_metrics(self, fold_results):
@@ -103,3 +123,17 @@ class CurveClassification:
             aggregate_fn += fn
 
         return aggregate_tp, aggregate_fp, aggregate_tn, aggregate_fn
+    
+
+    def invert_list(self, input_list : np.array) -> np.array:
+        """
+        Inverts all entries in a list of 1's and 0's.
+    
+        Given a list of 1's and 0's, this function creates a new list with the inverted values.
+        In the new list, 1's are replaced with 0's and 0's are replaced with 1's.
+
+        :param input_list: A np.arrat of 1's and 0's to be inverted.
+        :return: A new list with inverted values.
+        :rtype: np.array
+        """
+        return np.array([1 - i for i in input_list])
