@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.svm import SVC, OneClassSVM
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.decomposition import PCA
 
 
 
@@ -24,6 +25,7 @@ class CurveClassification:
         self.isBinary = conf["model"] == "two-class"
         self.kernel_type = conf["kernel_type"]
         self._class = conf["class"]
+        self.max_dims = conf["max_dims"]
         self.model = None
 
         
@@ -43,10 +45,14 @@ class CurveClassification:
         float
             The average accuracy across the 5 folds.
         """
+        print(author_curves.shape)
         k_fold = KFold(n_splits=5, shuffle=True, random_state=42)
         accuracy_values = []
         fold_results = []
         invert = False
+
+        if self.max_dims is not None:
+            author_curves = self.reduce_features_with_pca(author_curves)
 
         if not self.isBinary:
             # We must alter the labels based on the target class
@@ -89,7 +95,9 @@ class CurveClassification:
         print("Aggregate True Negatives:", tn)
         print("Aggregate False Negatives:", fn)
 
-        return np.mean(accuracy_values)
+        accuracy = np.mean(accuracy_values)
+        print(fr"{int((accuracy*10000))/10000} & {tp} & {fp} & {tn} & {fn}\\")
+        return accuracy
 
 
     def calculate_metrics(self, fold_results):
@@ -137,3 +145,9 @@ class CurveClassification:
         :rtype: np.array
         """
         return np.array([1 - i for i in input_list])
+    
+
+    def reduce_features_with_pca(self, features):
+        pca = PCA(n_components=self.max_dims)
+        reduced_features = pca.fit_transform(features)
+        return reduced_features
