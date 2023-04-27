@@ -2,7 +2,7 @@
 
 import numpy as np
 from sklearn.svm import SVC, OneClassSVM
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold, train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.decomposition import PCA
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -22,13 +22,21 @@ class CurveClassification:
         conf : dict
             A dictionary containing configuration information for the class.
         """
+        self.confidence = conf["confidence"]
+        if self.confidence is not None:
+            self.confidence /= 2
+        self.model = None
+
+        self.grid_search = conf["grid_search"]
         self.C = conf["C"]
         self.isBinary = conf["model"] == "two-class"
         self.kernel_type = conf["kernel_type"]
+        self.gamma = "auto"
         self._class = conf["class"]
         self.max_dims = conf["max_dims"]
         self.confidence = conf["confidence"]
-        self.model = None
+        self.imbalance_ratio = conf["imbalance_ratio"]
+
 
         
     def classify_curves(self, author_curves, labels):
@@ -47,7 +55,6 @@ class CurveClassification:
         float
             The average accuracy across the 5 folds.
         """
-        print(author_curves.shape)
         #vif = self.calculate_vif(author_curves)
         #print(vif)
         k_fold = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -60,11 +67,19 @@ class CurveClassification:
 
         if not self.isBinary:
             # We must alter the labels based on the target class
+            if self.imbalance_ratio is not None:
+                labels, author_curves = self.create_imbalance(labels, author_curves)
             if self._class == "different":
                 # If different we must flip the labels
                 labels = np.array([int(i==0) for i in labels], dtype=np.float32)
                 invert = True
-
+        
+        if self.grid_search:
+            params = self.grid_search_svm(author_curves, labels)[0]
+            print(params)
+            #self.C = params["C"]
+            #self.kernel_type = params["kernel"]
+            gamma = params["gamma"]
 
 
         for train_index, test_index in k_fold.split(author_curves):
@@ -75,11 +90,11 @@ class CurveClassification:
             # Set the model
             if self.isBinary:
                 if self.confidence is None:
-                    self.model = SVC(C=self.C, kernel=self.kernel_type)
+                    self.model = SVC(C=self.C, kernel=self.kernel_type, gamma=self.gamma)
                 else:
-                    self.model = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma="auto")
+                    self.model = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma=self.gamma)
             else:
-                self.model = OneClassSVM(nu=self.C, kernel=self.kernel_type, gamma="auto")
+                self.model = OneClassSVM(nu=self.C, kernel=self.kernel_type, gamma=self.gamma)
 
             # Train and test the model on this fold 
             self.model.fit(X_train, y_train)
@@ -158,7 +173,7 @@ class CurveClassification:
             numpy array: The predicted labels for the testing data.
         """
         # Train the SVM classifier
-        svm = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma="auto")
+        svm = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma=self.gamma)
         svm.fit(X_train, y_train)
         
         # Get the predicted probabilities for the test data
@@ -168,7 +183,63 @@ class CurveClassification:
         predictions = np.where(probabilities[:, 0] <= 0.5 + self.confidence, 1, 0)
         
         return predictions
+
     
+    def grid_search_svm(self, author_curves, labels, test_size=0.2, random_state=None):
+        # Split the data into training and test sets
+        X_train, X_test, y_train, y_test = train_test_split(author_curves, labels, test_size=test_size, random_state=random_state)
+
+        # Define the hyperparameter search space
+        param_grid = {
+            'C': np.logspace(-3, 3, 7),
+            'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+            'degree': [2, 3, 4],
+            'gamma': ['scale', 'auto'] + list(np.logspace(-3, 2, 6)),
+            'coef0': np.linspace(-1, 1, 21),
+        }
+
+        # Create a binary SVM classifier
+        svm = SVC()
+
+        # Create the grid search object
+        grid_search = GridSearchCV(estimator=svm, param_grid=param_grid, scoring='accuracy', n_jobs=-1, cv=5, verbose=1)
+
+        # Fit the grid search object to the training data
+        grid_search.fit(X_train, y_train)
+
+        # Get the best parameters and the corresponding classifier
+        best_params = grid_search.best_params_
+        best_svm = grid_search.best_estimator_
+
+        # Make predictions on the test set using the best classifier
+        y_pred = best_svm.predict(X_test)
+
+        # Calculate the accuracy of the classifier
+        accuracy = accuracy_score(y_test, y_pred)
+
+        return best_params, accuracy
+    
+
+    def create_imbalance(self, labels, features):
+        pos_indices = np.where(labels == 1)[0]
+        neg_indices = np.where(labels == 0)[0]
+        
+        num_pos = len(pos_indices)
+        num_neg = len(neg_indices)
+        
+        desired_neg = int(num_pos / self.imbalance_ratio)
+        
+        if desired_neg >= num_neg:
+            print("Desired imbalance_ratio is too high, cannot be achieved.")
+            return labels, features
+        
+        indices_to_remove = np.random.choice(neg_indices, size=(num_neg - desired_neg), replace=False)
+        
+        new_labels = np.delete(labels, indices_to_remove)
+        new_features = np.delete(features, indices_to_remove, axis=0)
+        
+        return new_labels, new_features
+        
 
     def invert_list(self, input_list : np.array) -> np.array:
         """
