@@ -62,24 +62,18 @@ class CurveClassification:
         fold_results = []
         invert = False
 
+        if self.imbalance_ratio is not None:
+            labels, author_curves = self.create_imbalance(labels, author_curves)
+
         if self.max_dims is not None:
             author_curves = self.reduce_features_with_pca(author_curves)
-
-        if not self.isBinary:
-            # We must alter the labels based on the target class
-            if self.imbalance_ratio is not None:
-                labels, author_curves = self.create_imbalance(labels, author_curves)
-            if self._class == "different":
-                # If different we must flip the labels
-                labels = np.array([int(i==0) for i in labels], dtype=np.float32)
-                invert = True
         
         if self.grid_search:
             params = self.grid_search_svm(author_curves, labels)[0]
             print(params)
-            #self.C = params["C"]
-            #self.kernel_type = params["kernel"]
-            gamma = params["gamma"]
+            self.C = params["C"]
+            self.kernel_type = params["kernel"]
+            self.gamma = params["gamma"]
 
 
         for train_index, test_index in k_fold.split(author_curves):
@@ -87,28 +81,12 @@ class CurveClassification:
             X_train, X_test = author_curves[train_index], author_curves[test_index]
             y_train, y_test = labels[train_index], labels[test_index]
 
-            # Set the model
+           
             if self.isBinary:
-                if self.confidence is None:
-                    self.model = SVC(C=self.C, kernel=self.kernel_type, gamma=self.gamma)
-                else:
-                    self.model = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma=self.gamma)
+                y_pred = self.two_class_svm(X_train, y_train, X_test)
             else:
-                self.model = OneClassSVM(nu=self.C, kernel=self.kernel_type, gamma=self.gamma)
+                y_pred = self.one_class_svm(X_train, y_train, X_test)
 
-            # Train and test the model on this fold 
-            self.model.fit(X_train, y_train)
-
-            if self.confidence is None:
-                y_pred = self.model.predict(X_test)
-            else:
-                y_pred = self.svm_threshold_classifier(X_train, y_train, X_test)
-            y_pred = [int(i==1) for i in y_pred]
-
-
-            if invert:
-                y_test = self.invert_list(y_test)
-                y_pred = self.invert_list(y_pred)
 
             accuracy = accuracy_score(y_test, y_pred)
             accuracy_values.append(accuracy)
@@ -116,15 +94,52 @@ class CurveClassification:
 
 
         tp, fp, tn, fn = self.calculate_metrics(fold_results)
-        print("Aggregate True Positives:", tp)
-        print("Aggregate False Positives:", fp)
-        print("Aggregate True Negatives:", tn)
-        print("Aggregate False Negatives:", fn)
+        #print("Aggregate True Positives:", tp)
+        #print("Aggregate False Positives:", fp)
+        #print("Aggregate True Negatives:", tn)
+        #print("Aggregate False Negatives:", fn)
 
         accuracy = np.mean(accuracy_values)
-        print(fr"{int((accuracy*10000))/10000} & {tp} & {fp} & {tn} & {fn}\\")
+        print(fr"{self.imbalance_ratio} & {int((accuracy*10000))/10000} & {tp} & {fp} & {tn} & {fn}\\")
         return accuracy
 
+
+    def two_class_svm(self, X_train, y_train, X_test):
+        # Specify and train the model
+        if self.confidence is None:
+            clf = SVC(kernel=self.kernel_type, C=self.C, gamma=self.gamma)
+        else:
+            clf = SVC(kernel=self.kernel_type, C=self.C, gamma=self.gamma, probability=True)
+        clf.fit(X_train, y_train)
+
+        # Make predictions on the test data
+        if self.confidence is None:
+            y_pred = clf.predict(X_test)
+        else:
+            y_prob = clf.predict_proba(X_test)
+            y_pred =  np.where(y_prob[:, 0] <= 0.5 + self.confidence, 1, 0)
+        
+        return y_pred
+
+        
+    def one_class_svm(self, X_train, y_train, X_test):
+        # Extract the indices of the normal class (labeled as 1) from the training data
+        normal_class_indices = np.where(y_train == 1)[0]
+
+        # Extract the features of the normal class from the training data
+        normal_class_features = X_train[normal_class_indices]
+
+        # Train the one-class SVM on the normal class features
+        clf = OneClassSVM(kernel=self.kernel_type, nu=self.C, gamma=self.gamma)
+        clf.fit(normal_class_features)
+
+        # Make predictions on the test data
+        predictions = clf.predict(X_test)
+
+        # Convert -1 predictions to 0
+        predictions[predictions == -1] = 0
+
+        return predictions
 
     def calculate_metrics(self, fold_results):
         """
@@ -230,9 +245,10 @@ class CurveClassification:
         desired_neg = int(num_pos / self.imbalance_ratio)
         
         if desired_neg >= num_neg:
-            print("Desired imbalance_ratio is too high, cannot be achieved.")
+            #print("Desired imbalance_ratio is too high, cannot be achieved.")
             return labels, features
         
+        np.random.seed(42)
         indices_to_remove = np.random.choice(neg_indices, size=(num_neg - desired_neg), replace=False)
         
         new_labels = np.delete(labels, indices_to_remove)
