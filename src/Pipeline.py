@@ -34,16 +34,22 @@ class Pipeline:
             self.word_cap = self.settings["word_cap"]
             self.file_partitions = self.settings["file_partitions"]
             dataset = self.get_data(self.settings["dataset"])
+
+            try:
+                tags = dataset["article_partition_tags"]
+            except KeyError:
+                tags = None
+
             authors = dataset["authors"].to_list()
             files = dataset["articles"].to_list()
-
+            
             # Preprocess the loaded data
             print(f"{get_time()} - Pre-processing files...")
             proc = PreProcessor(jobs=self.settings["preprocessing_jobs"])
             files = self.pre_process_data(data=files, proc=proc)
 
             # Get X and A pairs
-            grouped_by_author = self.group_files_and_authors(authors, files)
+            grouped_by_author = self.group_files_and_authors(authors, files, tags)
 
             # Configure chunking scheme
             self.chunker = Chunking(conf=self.settings["chunk_config"])
@@ -120,25 +126,26 @@ class Pipeline:
         self.labels, self.author_curves = self.load_author_curves(self.settings["load_author_curves"])
 
         # Train the author curve verification model
-        curve_classifier = CurveClassification(conf={
-                                                    "C" : self.settings["C_parameter_curve_classification"],
-                                                    "kernel_type" : self.settings["kernel_type_curve_classification"],
-                                                    "model" : self.settings["model"],
-                                                    "class" : self.settings["class"],
-                                                    "max_dims" : self.settings["max_dims"],
-                                                    "confidence" : self.settings["confidence"]
-                                                    })
-        accuracy = curve_classifier.classify_curves(author_curves=self.author_curves,
-                                                    labels=self.labels)
         
+        curve_classifier = CurveClassification(conf={
+                                                        "C" : self.settings["C_parameter_curve_classification"],
+                                                        "kernel_type" : self.settings["kernel_type_curve_classification"],
+                                                        "model" : self.settings["model"],
+                                                        "class" : self.settings["class"],
+                                                        "max_dims" : self.settings["max_dims"],
+                                                        "confidence" : self.settings["confidence"],
+                                                        "imbalance_ratio" : self.settings["imbalance_ratio"],
+                                                        "grid_search" : self.settings["grid_search"]
+                                                        })
+        accuracy = curve_classifier.classify_curves(author_curves=self.author_curves,
+                                                        labels=self.labels)
+            
         print(f"Accuracy for the author curve classifier: {round(accuracy*100, 2)} %")
         
 
 
-
-
      def get_data(self, filename : str) -> pd.DataFrame:
-        try:
+         try:
             data = pd.read_csv(filename, encoding="utf-8", encoding_errors="ignore")
 
             # If there is no word cap the dataset is just returned as is
@@ -158,25 +165,32 @@ class Pipeline:
             # Define new columns for the partitioned dataset
             partitoned_articles = []
             partitoned_authors = []
-
+            article_partition_tags = []
+            article_tag = 0
             for i, article in enumerate(articles):
                 author = authors[i]
                 article_parts = []
-                for j in range(0, len(article), self.word_cap):
-                    if j + self.file_partitions >= len(article):
-                        break
-                    # Retrieve a partition of the article
-                    article_parts.append(article[j:j+self.word_cap])
+                words = word_tokenize(article)
+                for j in range(0, len(words), self.word_cap):
 
+                    # Retrieve a partition of the article
+                    partition = words[j:j+self.word_cap]
+                    if len(partition) != self.word_cap:
+                        continue
+                    article_parts.append(" ".join(partition))
+                    article_partition_tags.append(article_tag)
                 # Add all file partitions and the author to the new columns
                 partitoned_articles += article_parts
                 partitoned_authors += [author]*len(article_parts)
+                article_tag += 1
             
-            data = pd.DataFrame({"authors" : partitoned_authors, "articles" : partitoned_articles})
+            data = pd.DataFrame({"authors" : partitoned_authors, 
+                                 "articles" : partitoned_articles,
+                                 "article_partition_tags" : article_partition_tags
+                                 })
             return data
-                
-
-        except FileNotFoundError:
+         
+         except FileNotFoundError:
             print(f"The file {filename} could not be found")
             exit(1)
 
@@ -189,13 +203,19 @@ class Pipeline:
          return processed_files
      
 
-     def group_files_and_authors(self, authors : list, files : list) -> dict:
+     def group_files_and_authors(self, authors : list, files : list, tags : list) -> dict:
         """
         Returns a dictionary where each author is mapped to all files (s)he has written
         """
         grouped_by_author = {author : [] for author in authors}
-        for i, author in enumerate(authors): grouped_by_author[author].append(files[i])
+        if tags is None:
+            for i, author in enumerate(authors): 
+                grouped_by_author[author].append(files[i])
+        else:
+            for i, author in enumerate(authors): 
+                grouped_by_author[author].append((files[i], tags[i]))
         return grouped_by_author
+     
      
 
      def create_X_A_pairs(self, grouped_by_author : dict) -> list:
@@ -221,21 +241,53 @@ class Pipeline:
 
 
      def create_X_A_pairs_balanced(self, grouped_by_author : dict) -> list:
+        """
+        Does the same as the above but the number of same and different author curves are equal
+        """
         same = []
         different = []
+        tagged = self.settings["file_partitions"]
+
         for author in grouped_by_author.keys():
             files = grouped_by_author[author]
+
             for i, file in enumerate(files):
+                X = file
+                if tagged:
+                    X = file[0]
+                if type(X) is not str:
+                    print("X type:", type(X))
                 # Chunk the file (X) here to avoid duplicate work later
-                chunked_file = self.chunker.chunk_files(file)
+                chunked_X = self.chunker.chunk_files(X)
+
                 for a in grouped_by_author.keys():
                     if a == author:
+                        # X is written by the author
                         if len(files) > 1:
-                            copied_files = deepcopy(files)
-                            copied_files.pop(i)
-                            same.append([True, file, chunked_file, copied_files])
+                            A = deepcopy(files)
+
+                            # Remove X from A
+                            tag = A.pop(i)[1]
+                            if tagged:
+                                # Remove all fractions from same origin as X from A
+                                #print(f"A length is {len(A)} yet to remove fractions with tag {tag}")
+                                A = self.handle_tagged_files(A, tag)
+                                #print(f"A length is {len(A)} after removing fractions")
+                                if len(A) == 0:
+                                    continue
+
+                                for f in A:
+                                    if type(f) is not str:
+                                        print("File in A not str but", type(f))
+
+                            #print(f"Same pair. A consist of {len(A)} files and {len(list(chain.from_iterable([word_tokenize(file) for file in A])))}")
+                            same.append([True, X, chunked_X, A])
+                            
                     else:
-                        different.append([False, file, chunked_file, grouped_by_author[a]])
+                        # X is not written by the author
+                        A = [file[0] if tagged else file for file in grouped_by_author[a]]
+                        #print(f"Different pair. A consist of {len(A)} files and {len(list(chain.from_iterable([word_tokenize(file) for file in A])))}")
+                        different.append([False, X, chunked_X, A])
 
         # Ensure that there are equally many samples of each class
         if len(different) > len(same):
@@ -248,6 +300,18 @@ class Pipeline:
         X_A = same + different
         shuffle(X_A)
         return X_A
+     
+
+     def handle_tagged_files(self, A_files, file_tag) -> list:
+         """
+         Handles the creation of X, A pairs when file tags are used. 
+         This is occurs when single texts have been broken up into smaller
+         chunks and treated as individual files. This method ensures that no fragments
+         from the same file as the one used as X ends up in A.
+         """
+         # Finds all fragments from a different source file than X
+         allowed_files = [file[0] for file in A_files if file[1] != file_tag]
+         return allowed_files
         
 
      def handle_block(self, queue : Queue, block : list, clf : Unmasking) -> None:
