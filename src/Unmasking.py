@@ -4,7 +4,7 @@ from Chunking import Chunking
 from FeatureExtractor import FeatureExtractor
 import numpy as np
 from sklearn.model_selection import KFold
-from sklearn.svm import SVC
+from sklearn.svm import SVC, OneClassSVM
 from sklearn.metrics import accuracy_score
 from random import shuffle
 
@@ -19,33 +19,35 @@ class Unmasking:
                 chunker : Chunking,
                 feature_extractor : FeatureExtractor,
                 features_eliminated : int,
-                C_parameter_curve_construction : float
+                C_parameter_curve_construction : float,
+                model : str
             ) -> None:
 
         self.chunker = chunker
         self.fe = feature_extractor
         self.features_eliminated = features_eliminated
         self.C_parameter_curve_construction = C_parameter_curve_construction
+        self.model = model
 
 
     def handle_X_A_pair(
                     self,  
-                    X : str,
+                    X : list,
                     A : list,
-                    chunks_X : list,
                 ) -> np.ndarray:
         
         # Get the chunks from X and A
-        chunks_X = chunks_X
-        chunks_A = self.chunker.chunk_files(A)
+        chunks_X = X
+        chunks_A = A
 
-        # Ensure that there are equally many chunks from X and A
-        if len(chunks_A) > len(chunks_X):
-            shuffle(chunks_A)
-            chunks_A = chunks_A[:len(chunks_X)]
-        elif len(chunks_X) > len(chunks_A):
-            shuffle(chunks_X)
-            chunks_X = chunks_X[:len(chunks_A)]
+        if self.model == "two_class":
+            # Ensure that there are equally many chunks from X and A
+            if len(chunks_A) > len(chunks_X):
+                shuffle(chunks_A)
+                chunks_A = chunks_A[:len(chunks_X)]
+            elif len(chunks_X) > len(chunks_A):
+                shuffle(chunks_X)
+                chunks_X = chunks_X[:len(chunks_A)]
 
         # Get the features from the chunks
         features_X, features_A = self.fe.extract_features(
@@ -101,9 +103,12 @@ class Unmasking:
                 y_test = labels[test_index]
 
                 # Specify, train, and test the model
-                clf = SVC(kernel="linear", C=self.C_parameter_curve_construction)
-                clf.fit(X_train, y_train)
-                pred = clf.predict(X_test)
+                if self.model == "two_class":
+                    pred, clf = self.two_class( X_train, X_test, y_train, y_test)
+                else:
+                    pred, clf = self.one_class( X_train, X_test, y_train, y_test)
+                    #y_test = y_test[y_test == 1]
+
                 score = accuracy_score(y_test, pred)
                 all_results[fold_index, elim_round] = score
 
@@ -113,8 +118,38 @@ class Unmasking:
         # Calculate and return the mean accuracy for each elimination round for all folds
         results = np.mean(all_results, axis=0)
         return results
-
     
+
+    def two_class(self, X_train, X_test, y_train, y_test) -> np.ndarray:
+        # Specify, train, and test the model
+        clf = SVC(kernel="linear", C=self.C_parameter_curve_construction)
+        clf.fit(X_train, y_train)
+        pred = clf.predict(X_test)
+        return pred, clf
+    
+
+    def one_class(self, X_train, X_test, y_train, y_test) -> np.ndarray:
+        # Specify, train, and test the model
+        clf = OneClassSVM(kernel="linear", nu=self.C_parameter_curve_construction)
+
+         # Extract the indices of the normal class (labeled as 1) from the training data
+        A_chunks_indicies = np.where(y_train == 0)[0]
+
+        # Extract the features of the normal class from the training data
+        A_chunks = X_train[A_chunks_indicies]
+
+        # Train the model on the A chunks 
+        clf.fit(A_chunks)
+
+        # Classify the X chunks in X_train
+        pred = clf.predict(X_test)
+
+        # Convert -1 predictions to 1 and 1 to 0
+        pred[pred == 1] = 0
+        pred[pred == -1] = 1
+        return pred, clf
+    
+
     def feature_elimination(self, chunks : np.ndarray, clf) -> np.ndarray:
         """
         Removes the n first/most positively weighted features from each chunk

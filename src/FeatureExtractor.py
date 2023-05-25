@@ -159,6 +159,8 @@ class FeatureExtractor:
         tokens_X = list(chain.from_iterable(chunks_X))
         tokens_A = list(chain.from_iterable(chunks_A))
 
+
+
         # Get token counters for X and A
         counter_X, counter_A = self.get_token_counters(tokens_X, tokens_A)
 

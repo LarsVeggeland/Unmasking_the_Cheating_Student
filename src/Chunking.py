@@ -2,9 +2,11 @@
 
 from nltk.tokenize import word_tokenize
 from nltk import ngrams, pos_tag
-import random
+from random import shuffle
 import math
 import numpy as np
+import regex as re
+from copy import deepcopy
 
 
 
@@ -13,39 +15,21 @@ import numpy as np
 class Chunking:
 
     def __init__(self, conf : dict) -> None:
-        errors = []
-        try:
-            self.size = conf["size"]
-            assert(self.size > 0)
-        except AssertionError:
-            errors.append(f"Chunk size must be a positive integer not {self.size}")
-
-        try:
-            self.type = conf['type']
-            assert(self.type in ["words", "ngrams", "pos_tags", "lex_pos"])
-
-            if self.type == "ngrams":
-                try:
-                    self.ngram_size = conf["ngram_size"]
-                    assert(self.ngram_size > 0 and isinstance(self.ngram_size, int))
-                except AssertionError:
-                    errors.append(f"ngram size must be a positive integer not {self.ngram_size}")
-                except KeyError:
-                        errors.append("Chunk type set to ngrams but ngram size is not defined in configuration file")
-        except AssertionError:
-            errors.append(f"The provided chunk type {self.type} does not exist")
-
-        try:
-            self.method = conf["method"]
-            assert(self.method in ["original", "bootstrap", "sliding_window"])
-        except AssertionError:
-            errors.append(f"The provided chunk method {self.method} does not exits")
         
-        if len(errors) > 0:
-            error_msg = "\n".join(errors)
-            raise AttributeError(f"There are issues with the provided configuration file:\n{error_msg}")
-        
+        self.size = conf["size"]
+        self.type = conf['type']
+        self.method = conf["method"]
 
+        if self.type == "ngrams":
+            self.ngram_size = conf["ngram_size"]
+        
+        if self.method != "original":
+            self.chunk_count = conf["chunk_count"]
+
+        if self.method == "sliding_window":
+            self.window_movement = conf["window_movement"]
+        
+        
     def get_tokens(self, files :list) -> list:
         """
         Get the specified type of tokens from the file
@@ -63,9 +47,12 @@ class Chunking:
         if self.method == "original":
             return self.original(tokens)
 
-        elif self.method == "bootstrap":
-            # TODO
-            return self.bootstrap(tokens, 25)
+        if self.method == "bootstrap":
+            return self.bootstrap(tokens=tokens)
+        
+        if self.method == "sliding_window":
+            # TODO 
+            return self.sliding_window(tokens)
 
 
     def words(self, data : list) -> list:
@@ -73,7 +60,7 @@ class Chunking:
         Partitions every provided file into chunks of a specified length
         """
         # First check if the provided is a single or list of files
-        filestream = self.get_filestream(data)
+        filestream = data#self.get_filestream(data)
         
         # Get all the words in the stream in a list format
         words = word_tokenize(filestream)
@@ -90,7 +77,7 @@ class Chunking:
         """
         # First check if the provided is a single or list of files
         filestream = self.get_filestream(data)
-
+        
         # Get all the character n-grams from the filestream
         grams = list(ngrams(filestream, self.ngram_size))[::self.ngram_size]
 
@@ -152,33 +139,61 @@ class Chunking:
         
         return res
 
-    def bootstrap(self, data : list, chunk_count : int) -> list:
+    def bootstrap(self, tokens : list) -> list:
         """
         Uses the randomized bootstrap method for smapling chunks
         """
-        res = [None]*len(data)
-        for i, file in enumerate(data):
-            # Get all the words in the file
-            words = word_tokenize(file)
-            chunks = []
+        # Create the 2d chunk array
+        chunks = [[None for j in range(self.size)] for i in range(self.chunk_count)]
 
-            for _ in range(chunk_count):
-                # Create a new chunk
-                chunk = [None]*self.size
+        # Initialize random indices
+        indices = [i for i in range(len(tokens))]
+        shuffle(indices)
 
-                for j in range(self.size):
-                    # If the pool of words have been exhausted simply replinish it
-                    if len(words) == 0:
-                        words += word_tokenize(file)
-                        
-                    # Calculate a random index and pop the element at that index from the pool of words
-                    index = random.randrange(0,len(words))
-                    chunk[j] = words.pop(index)
+        for _, chunk in enumerate(chunks):
+
+            for j in range(len(chunk)):
+                 # Repopulate the random indicies if exhausted
+                if not len(indices):
+                    indices = [i for i in range(len(tokens))]
+                    shuffle(indices)
                 
-                chunks.append(chunk)
-            res[i] = chunks
-        return res
+                # Get an index from the list of shuffled indicies
+                random_index = indices.pop()
+
+                # Insert the token at the random index into the chunk
+                chunk[j] = tokens[random_index]
+
+
+
+        return chunks
     
+
+    def sliding_window(self, tokens : list) -> list:
+        """
+        Uses the sliding window method for populating chunks
+        """
+        # Create the 2d chunk array
+        chunks = [[None for j in range(self.size)] for i in range(self.chunk_count)]
+
+        # Determine the start and end indicies for each window
+        start_indicies = [(i*self.window_movement)%len(tokens) for i in range(self.chunk_count)]
+        end_indicies =  [(i*self.window_movement + self.size)%len(tokens) for i in range(self.chunk_count)]
+
+        # Create all the chunks using the start and end indicies
+        for i in range(len(chunks)):
+            start = start_indicies[i]
+            end = end_indicies[i]
+
+            if start < end:
+                chunks[i] = tokens[start:end]
+            # If end < start then a full circle of the tokens have been made. This must be handled differently
+            else:
+                chunks[i] = tokens[start:] + tokens[:end]
+        
+        return chunks
+
+
 
     def get_filestream(self, data : list) -> str:
         """
@@ -192,4 +207,3 @@ class Chunking:
             file_stream = data
 
         return file_stream
-    

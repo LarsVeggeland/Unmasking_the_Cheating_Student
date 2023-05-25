@@ -51,4 +51,4 @@ def __main__(source : str) -> None:
     
 
 if __name__ == "__main__":
-    __main__("conf/PreliminaryTesting/OriginalPoSBalanced.json")
+    __main__("conf/PreliminaryTesting/KoppelOriginal.json")

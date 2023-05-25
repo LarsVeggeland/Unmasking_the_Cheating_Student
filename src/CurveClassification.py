@@ -3,7 +3,7 @@
 import numpy as np
 from sklearn.svm import SVC, OneClassSVM
 from sklearn.model_selection import KFold, train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score
 from sklearn.decomposition import PCA
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
@@ -34,7 +34,6 @@ class CurveClassification:
         self.gamma = "auto"
         self._class = conf["class"]
         self.max_dims = conf["max_dims"]
-        self.confidence = conf["confidence"]
         self.imbalance_ratio = conf["imbalance_ratio"]
 
 
@@ -42,7 +41,7 @@ class CurveClassification:
     def classify_curves(self, author_curves, labels):
         """
         Train and test an SVM model using 5-fold cross-validation.
-        
+
         Parameters
         ----------
         author_curves : numpy array
@@ -55,12 +54,12 @@ class CurveClassification:
         float
             The average accuracy across the 5 folds.
         """
-        #vif = self.calculate_vif(author_curves)
-        #print(vif)
         k_fold = KFold(n_splits=5, shuffle=True, random_state=42)
-        accuracy_values = []
         fold_results = []
-        invert = False
+        precision_values = []
+        recall_values = []
+        f1_values = []
+        total_classified = 0
 
         if self.imbalance_ratio is not None:
             labels, author_curves = self.create_imbalance(labels, author_curves)
@@ -75,50 +74,60 @@ class CurveClassification:
             self.kernel_type = params["kernel"]
             self.gamma = params["gamma"]
 
-
         for train_index, test_index in k_fold.split(author_curves):
             # Split data
             X_train, X_test = author_curves[train_index], author_curves[test_index]
             y_train, y_test = labels[train_index], labels[test_index]
 
-           
             if self.isBinary:
                 y_pred = self.two_class_svm(X_train, y_train, X_test)
             else:
                 y_pred = self.one_class_svm(X_train, y_train, X_test)
 
+            # Filter out unclassified instances
+            classified_indices = y_pred != -1
+            y_test_classified = y_test[classified_indices]
+            y_pred_classified = y_pred[classified_indices]
+            total_classified += len(y_pred_classified)
 
-            accuracy = accuracy_score(y_test, y_pred)
-            accuracy_values.append(accuracy)
-            fold_results.append((y_test, y_pred))
+            precision = precision_score(y_test_classified, y_pred_classified)
+            recall = recall_score(y_test_classified, y_pred_classified)
+            f1 = f1_score(y_test_classified, y_pred_classified)
 
+            precision_values.append(precision)
+            recall_values.append(recall)
+            f1_values.append(f1)
+
+            fold_results.append((y_test_classified, y_pred_classified))
 
         tp, fp, tn, fn = self.calculate_metrics(fold_results)
-        #print("Aggregate True Positives:", tp)
-        #print("Aggregate False Positives:", fp)
-        #print("Aggregate True Negatives:", tn)
-        #print("Aggregate False Negatives:", fn)
 
-        accuracy = np.mean(accuracy_values)
-        print(fr"{self.imbalance_ratio} & {int((accuracy*10000))/10000} & {tp} & {fp} & {tn} & {fn}\\")
-        return accuracy
+        average_precision = np.mean(precision_values)
+        average_recall = np.mean(recall_values)
+        average_f1 = np.mean(f1_values)
+
+        classification_rate = total_classified / len(labels)
+
+        if self.confidence is None:
+            print(fr"{self.imbalance_ratio} & {int((average_f1*10000))/10000} & {int((average_precision*10000))/10000} & {int((average_recall*10000))/10000} & {fp} & {fn}\\")
+        else: 
+           #print(fr"{2*self.confidence} & {int(classification_rate*1000)/1000} & {int((average_f1*10000))/10000} & {int((average_precision*10000))/10000} & {int((average_recall*10000))/10000} & {fp} & {fn}\\")
+            print(rf"{2*self.confidence} & {int((tn/(labels[labels == 0].shape[0])*1000))/1000} & {int((fn/(labels[labels == 1].shape[0])*1000))/1000}\\")
+        return average_f1
+
 
 
     def two_class_svm(self, X_train, y_train, X_test):
-        # Specify and train the model
-        if self.confidence is None:
-            clf = SVC(kernel=self.kernel_type, C=self.C, gamma=self.gamma)
-        else:
-            clf = SVC(kernel=self.kernel_type, C=self.C, gamma=self.gamma, probability=True)
-        clf.fit(X_train, y_train)
-
-        # Make predictions on the test data
-        if self.confidence is None:
-            y_pred = clf.predict(X_test)
-        else:
-            y_prob = clf.predict_proba(X_test)
-            y_pred =  np.where(y_prob[:, 0] <= 0.5 + self.confidence, 1, 0)
+        # Simply return the predictions from the svm threshold method
+        if self.confidence is not None:
+            y_pred = self.svm_threshold_classifier(X_train, y_train, X_test)
+            return y_pred
         
+        # If no threshold is specfied do normal train test
+        clf = SVC(kernel=self.kernel_type, C=self.C, gamma=self.gamma)
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+
         return y_pred
 
         
@@ -177,27 +186,30 @@ class CurveClassification:
     def svm_threshold_classifier(self, X_train, y_train, X_test):
         """
         Trains an SVM classifier and makes predictions using a threshold.
-        
+
         Parameters:
             X_train (numpy array): The feature matrix for training data.
             y_train (numpy array): The label vector for training data.
             X_test (numpy array): The feature matrix for testing data.
-            threshold (float): The decision threshold for classifying predictions as 0.
-            
+            threshold (float): The decision threshold for classifying predictions.
+
         Returns:
             numpy array: The predicted labels for the testing data.
         """
         # Train the SVM classifier
         svm = SVC(probability=True, kernel=self.kernel_type, C=self.C, gamma=self.gamma)
         svm.fit(X_train, y_train)
-        
+
         # Get the predicted probabilities for the test data
-        probabilities = svm.predict_proba(X_test)
-        
+        probabilities = svm.predict_proba(X_test)[:, 0]
+
         # Apply the threshold to the probabilities and classify the predictions
-        predictions = np.where(probabilities[:, 0] <= 0.5 + self.confidence, 1, 0)
-        
+        predictions = np.full_like(probabilities, -1)  # initialize all as 'undecided'
+        predictions[probabilities <= 0.5 - self.confidence] = 1  # 'negative'
+        predictions[probabilities >= 0.5 + self.confidence] = 0  # 'positive'
+
         return predictions
+
 
     
     def grid_search_svm(self, author_curves, labels, test_size=0.2, random_state=None):
