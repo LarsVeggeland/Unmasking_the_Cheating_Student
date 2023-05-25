@@ -2,15 +2,17 @@
 
 import pandas as pd
 import numpy as np
+import random
 from random import shuffle
 from copy import deepcopy
 from multiprocessing import Process, Queue
 from queue import Empty
 import json
 from nltk.tokenize import word_tokenize
+from itertools import chain
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
-from DataPreProcessing import PreProcessor
+#from DataPreProcessing import PreProcessor
 from Chunking import Chunking
 from FeatureExtractor import FeatureExtractor
 from Unmasking import Unmasking
@@ -35,6 +37,12 @@ class Pipeline:
             self.file_partitions = self.settings["file_partitions"]
             dataset = self.get_data(self.settings["dataset"])
 
+            # Configure chunking scheme
+            self.chunker = Chunking(conf=self.settings["chunk_config"])
+
+                        # Configure feature extraction
+            self.feature_extractor = FeatureExtractor(conf=self.settings["feature_config"])
+
             try:
                 tags = dataset["article_partition_tags"]
             except KeyError:
@@ -42,32 +50,45 @@ class Pipeline:
 
             authors = dataset["authors"].to_list()
             files = dataset["articles"].to_list()
-            
+
+
             # Preprocess the loaded data
-            print(f"{get_time()} - Pre-processing files...")
-            proc = PreProcessor(jobs=self.settings["preprocessing_jobs"])
-            files = self.pre_process_data(data=files, proc=proc)
+            #print(f"{get_time()} - Pre-processing files...")
+            #proc = PreProcessor(jobs=self.settings["preprocessing_jobs"])
+            #files = self.pre_process_data(data=files, proc=proc)
+
+            print(f"{get_time()} - Constructing text pairs...")
+           
+            file_lengths = np.array([len(word_tokenize(file)) for file in files])
+
+            # Chunk all files now to avoid duplicate work
+            files = [self.chunker.chunk_files(file) for file in files]
 
             # Get X and A pairs
             grouped_by_author = self.group_files_and_authors(authors, files, tags)
+            
+            print(f"\n{'#'*8} Dataset Metadata {'#'*8}")
+            print(f"Number of authors: {len(grouped_by_author.keys())}\nNumber of files: {len(list(chain.from_iterable(grouped_by_author.values())))}")
+            print(f"Average file length: {int(np.mean(file_lengths))}\nstd: {round(np.std(file_lengths), 2)}")
+            print("#"*34, "\n")
+        
+            print(f"{get_time()} - Constructing X,A pairs...")
 
-            # Configure chunking scheme
-            self.chunker = Chunking(conf=self.settings["chunk_config"])
-
-            # Configure feature extraction
-            self.feature_extractor = FeatureExtractor(conf=self.settings["feature_config"])
 
             if self.settings["balanced_classes"] == True:
                 X_A = self.create_X_A_pairs_balanced(grouped_by_author)
             else:
                 X_A = self.create_X_A_pairs(grouped_by_author)
 
+            print(f"The proportion of same X, A pairs is {round(100*len([i for i in X_A if i[0]])/len(X_A), 2)} %")
+
             # Specify the Unmasking model
             clf = Unmasking(
                         chunker=self.chunker,
                         feature_extractor=self.feature_extractor,
                         features_eliminated=self.settings["features_eliminated"],
-                        C_parameter_curve_construction=self.settings["C_parameter_curve_construction"]
+                        C_parameter_curve_construction=self.settings["C_parameter_curve_construction"],
+                        model=self.settings["chunk_classifier_type"]
                     )
             
             self.author_curves = [None]*len(X_A)
@@ -124,37 +145,37 @@ class Pipeline:
         # Load the curves
         print(f"{get_time()} - Author curves loaded from {self.settings['load_author_curves']}")
         self.labels, self.author_curves = self.load_author_curves(self.settings["load_author_curves"])
-
-        # Train the author curve verification model
         
+        # Train the author curve verification model
         curve_classifier = CurveClassification(conf={
                                                         "C" : self.settings["C_parameter_curve_classification"],
-                                                        "kernel_type" : self.settings["kernel_type_curve_classification"],
-                                                        "model" : self.settings["model"],
-                                                        "class" : self.settings["class"],
-                                                        "max_dims" : self.settings["max_dims"],
-                                                        "confidence" : self.settings["confidence"],
-                                                        "imbalance_ratio" : self.settings["imbalance_ratio"],
-                                                        "grid_search" : self.settings["grid_search"]
-                                                        })
-        accuracy = curve_classifier.classify_curves(author_curves=self.author_curves,
-                                                        labels=self.labels)
+                                                            "kernel_type" : self.settings["kernel_type_curve_classification"],
+                                                            "model" : self.settings["model"],
+                                                            "class" : self.settings["class"],
+                                                            "max_dims" : self.settings["max_dims"],
+                                                            "confidence" : self.settings["confidence"],
+                                                            "imbalance_ratio" : self.settings["imbalance_ratio"],
+                                                            "grid_search" : self.settings["grid_search"]
+                                                        }
+                                                    )
             
-        print(f"Accuracy for the author curve classifier: {round(accuracy*100, 2)} %")
+        accuracy = curve_classifier.classify_curves(author_curves=self.author_curves,
+                                                                labels=self.labels)
+                
+        #print(f"Accuracy for the author curve classifier: {round(accuracy*100, 2)} %")
         
 
 
      def get_data(self, filename : str) -> pd.DataFrame:
          try:
-            data = pd.read_csv(filename, encoding="utf-8", encoding_errors="ignore")
+            # Get the different columns of the dataset
+            authors, articles = self.read_and_filter_data(filename)
 
             # If there is no word cap the dataset is just returned as is
             if self.word_cap is None:
+                data = pd.DataFrame({"authors" : authors, "articles" : articles})
                 return data
-            
-            # Get the different columns of the dataset
-            authors = data["authors"].to_list()
-            articles = data['articles'].to_list()
+        
 
             # If no file partition is defined each file is simply capped at the specified word count
             if not self.file_partitions:
@@ -193,6 +214,38 @@ class Pipeline:
          except FileNotFoundError:
             print(f"The file {filename} could not be found")
             exit(1)
+    
+
+     def read_and_filter_data(self, filename):
+        data = pd.read_csv(filename, encoding="utf-8", encoding_errors="ignore")
+
+        # Get the different columns of the dataset
+        authors = data["authors"].tolist()
+        articles = data['articles'].tolist()
+
+        # Remove any corrupted entries
+        uncorrupted_files = [i for i, article in enumerate(articles) if type(article) is str]
+        authors = [author for i, author in enumerate(authors) if i in uncorrupted_files]
+        articles = [article for i, article in enumerate(articles) if i in uncorrupted_files]
+
+        filtered_authors = []
+        filtered_articles = []
+
+        for author, article in zip(authors, articles):
+            article_length = len(word_tokenize(article))
+            min_length = self.settings["minimum_file_length"]
+            max_length = self.settings["maximum_file_length"]
+
+            if min_length is not None and article_length < min_length:
+                continue
+
+            if max_length is not None and article_length > max_length:
+                continue
+
+            filtered_authors.append(author)
+            filtered_articles.append(article)
+        
+        return filtered_authors, filtered_articles
 
 
      def pre_process_data(self, data : list, proc : PreProcessor) -> list:
@@ -203,18 +256,35 @@ class Pipeline:
          return processed_files
      
 
-     def group_files_and_authors(self, authors : list, files : list, tags : list) -> dict:
+     def group_files_and_authors(self, authors: list, files: list, tags: list = None) -> dict:
         """
         Returns a dictionary where each author is mapped to all files (s)he has written
         """
-        grouped_by_author = {author : [] for author in authors}
-        if tags is None:
-            for i, author in enumerate(authors): 
+        grouped_by_author = {author: [] for author in authors}
+
+        for i, author in enumerate(authors):
+            if tags is None:
                 grouped_by_author[author].append(files[i])
-        else:
-            for i, author in enumerate(authors): 
+            else:
                 grouped_by_author[author].append((files[i], tags[i]))
+
+        if self.settings["minimum_file_count"]:
+            authors_to_remove = [
+                author for author, files in grouped_by_author.items()
+                if len(files) < self.settings["minimum_file_count"]
+            ]
+
+            for author in authors_to_remove:
+                del grouped_by_author[author]
+
+        if self.settings["maximum_file_count"]:
+            for author, files in grouped_by_author.items():
+                if len(files) > self.settings["maximum_file_count"]:
+                    files_to_keep = random.sample(files, self.settings["maximum_file_count"])
+                    grouped_by_author[author] = files_to_keep
+
         return grouped_by_author
+
      
      
 
@@ -225,17 +295,18 @@ class Pipeline:
         X_A = []
         for author in grouped_by_author.keys():
             files = grouped_by_author[author]
-            for i, file in enumerate(files):
+            #grouped_by_author[author] = [self.chunker.chunk_files(file) for file in]
+            for i, X in enumerate(files):
                 # Chunk the file (X) here to avoid duplicate work later
-                chunked_file = self.chunker.chunk_files(file)
+                #chunked_file = self.chunker.chunk_files(file)
                 for a in grouped_by_author.keys():
                     if a == author:
                         if len(files) > 1:
-                            copied_files = deepcopy(files)
-                            copied_files.pop(i)
-                            X_A.append([True, file, chunked_file, copied_files])
+                            A = deepcopy(files)
+                            A.pop(i)
+                            X_A.append([True, X, list(chain.from_iterable(A))])
                     else:
-                        X_A.append([False, file, chunked_file, grouped_by_author[a]])
+                        X_A.append([False, X, list(chain.from_iterable(grouped_by_author[a]))])
         
         return X_A
 
@@ -251,14 +322,9 @@ class Pipeline:
         for author in grouped_by_author.keys():
             files = grouped_by_author[author]
 
-            for i, file in enumerate(files):
-                X = file
+            for i, X in enumerate(files):
                 if tagged:
-                    X = file[0]
-                if type(X) is not str:
-                    print("X type:", type(X))
-                # Chunk the file (X) here to avoid duplicate work later
-                chunked_X = self.chunker.chunk_files(X)
+                    X = X[0]
 
                 for a in grouped_by_author.keys():
                     if a == author:
@@ -276,18 +342,14 @@ class Pipeline:
                                 if len(A) == 0:
                                     continue
 
-                                for f in A:
-                                    if type(f) is not str:
-                                        print("File in A not str but", type(f))
-
                             #print(f"Same pair. A consist of {len(A)} files and {len(list(chain.from_iterable([word_tokenize(file) for file in A])))}")
-                            same.append([True, X, chunked_X, A])
+                            same.append([True, X, list(chain.from_iterable(A))])
                             
                     else:
                         # X is not written by the author
                         A = [file[0] if tagged else file for file in grouped_by_author[a]]
                         #print(f"Different pair. A consist of {len(A)} files and {len(list(chain.from_iterable([word_tokenize(file) for file in A])))}")
-                        different.append([False, X, chunked_X, A])
+                        different.append([False, X, list(chain.from_iterable(A))])
 
         # Ensure that there are equally many samples of each class
         if len(different) > len(same):
@@ -322,13 +384,18 @@ class Pipeline:
             # Get the different elements in the X_A pair
             label = X_A_pair[0]
             X = X_A_pair[1]
-            chunks_X = X_A_pair[2]
-            A = X_A_pair[3]
-
+            A = X_A_pair[2]
+                
             # Get the author curve
-            author_curve = clf.handle_X_A_pair(X=X, A=A, chunks_X=chunks_X)
+            if self.chunker.method == "original1":
+                author_curve = clf.handle_X_A_pair(X=X, A=A)
+            else:
+                author_curves = []
+                for _ in range(10):
+                    author_curves.append(clf.handle_X_A_pair(X=X, A=A))
+                author_curve = np.mean(author_curves, axis=0)
 
-            # Now push the label and finished author cure to the que
+            # Now push the label and finished author curve to the queue
             queue.put([label, author_curve])
 
     
