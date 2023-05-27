@@ -12,7 +12,6 @@ from nltk.tokenize import word_tokenize
 from itertools import chain
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
-#from DataPreProcessing import PreProcessor
 from Chunking import Chunking
 from FeatureExtractor import FeatureExtractor
 from Unmasking import Unmasking
@@ -50,12 +49,6 @@ class Pipeline:
 
             authors = dataset["authors"].to_list()
             files = dataset["articles"].to_list()
-
-
-            # Preprocess the loaded data
-            #print(f"{get_time()} - Pre-processing files...")
-            #proc = PreProcessor(jobs=self.settings["preprocessing_jobs"])
-            #files = self.pre_process_data(data=files, proc=proc)
 
             print(f"{get_time()} - Constructing text pairs...")
            
@@ -247,14 +240,6 @@ class Pipeline:
         
         return filtered_authors, filtered_articles
 
-
-     def pre_process_data(self, data : list, proc : PreProcessor) -> list:
-         """
-         Perform the specified preprocessing on all files
-         """
-         processed_files = [proc.process_object(file) for file in data] 
-         return processed_files
-     
 
      def group_files_and_authors(self, authors: list, files: list, tags: list = None) -> dict:
         """

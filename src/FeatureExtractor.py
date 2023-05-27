@@ -14,14 +14,6 @@ class FeatureExtractor:
     def __init__(self, conf : dict) -> None:
         errors = []
         try:
-            self.type = conf["type"]
-            assert(self.type in ["words", "ngrams", "pos_tags", "lex_pos"])
-        except AssertionError:
-            errors.append(f"The provided feature type {self.type} does not exist")
-        except KeyError:
-            errors.append(f'The mandatory field "type" has been omitted from the configuration file')
-
-        try:
             self.normalized = conf["normalized"]
             assert(isinstance(self.normalized, bool))
         except AssertionError:
